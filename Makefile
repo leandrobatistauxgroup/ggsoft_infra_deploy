@@ -78,7 +78,7 @@ up: ## Sobe todos os serviços (sem rebuild)
 	@echo "   Lounge  → http://localhost:23458"
 	@echo "   Nginx   → http://localhost:8001"
 	@echo "   CS      → http://localhost:8888"
-	@echo "   RGS solid  → http://localhost:43310"
+	@echo "   RGS solid  → http://localhost:43319"
 	@echo "   RGS fruits → http://localhost:43316"
 
 build: ## Build + sobe todos os serviços
