@@ -28,7 +28,25 @@ clone: ## Clona todos os repositórios em ./ggsoft/
 	@for repo in $(REPOS); do \
 		if [ ! -d "$(BASE)/$$repo" ]; then \
 			echo "▶ Clonando $$repo..."; \
-			git clone $(GIT)/$$repo.git $(BASE)/$$repo; \
+			if ! git clone $(GIT)/$$repo.git $(BASE)/$$repo 2>&1; then \
+				echo ""; \
+				echo "╔══════════════════════════════════════════════════════════╗"; \
+				echo "║                  ❌ ERRO DE ACESSO SSH                  ║"; \
+				echo "╠══════════════════════════════════════════════════════════╣"; \
+				echo "║  Não foi possível clonar: $$repo                        ║"; \
+				echo "║                                                          ║"; \
+				echo "║  A chave SSH deste servidor não está autorizada.         ║"; \
+				echo "║                                                          ║"; \
+				echo "║  Entre em contato com o suporte GGSoft e forneça        ║"; \
+				echo "║  a chave pública SSH deste servidor:                     ║"; \
+				echo "║                                                          ║"; \
+				echo "║    cat ~/.ssh/ggsoft.pub                                 ║"; \
+				echo "║                                                          ║"; \
+				echo "║  Consulte o README.md para instruções completas.         ║"; \
+				echo "╚══════════════════════════════════════════════════════════╝"; \
+				echo ""; \
+				exit 1; \
+			fi \
 		else \
 			echo "  $$repo já existe, pulando."; \
 		fi \
