@@ -18,9 +18,10 @@ DC_CS      := docker-compose -f $(BASE)/ggsoft_core_cs/cs/docker-compose.yml
 DC_LOUNGE  := docker-compose -f $(BASE)/ggsoft_core_lounge/docker-compose.yml
 DC_RGS     := docker-compose -f $(BASE)/ggsoft_core_rgs_slot3x3/docker-compose.yml
 DC_MATH    := docker-compose -f $(BASE)/ggsoft_core_math_slot/docker-compose.yml
+DC_HISTORY := docker-compose -f $(BASE)/ggsoft_core_history/docker-compose.yml
 DC_NGINX   := docker-compose -f $(BASE)/ggsoft_infra_nginx/docker-compose.yml
 
-.PHONY: help clone pull env up build run deploy stop restart log log-mysql log-redis log-cs log-lounge log-rgs log-nginx log-math monitor status erase
+.PHONY: help clone pull env up build run deploy stop restart log log-mysql log-redis log-cs log-lounge log-rgs log-nginx log-math log-history monitor status erase
 
 clone: ## Clona todos os repositórios em ./ggsoft/
 	@mkdir -p $(BASE)
@@ -61,6 +62,8 @@ up: ## Sobe todos os serviços (sem rebuild)
 	@$(DC_REDIS) up -d
 	@echo "▶ Math..."
 	@$(DC_MATH) up -d
+	@echo "▶ History..."
+	@$(DC_HISTORY) up -d
 	@echo "▶ CS..."
 	@$(DC_CS) up -d
 	@sleep 5
@@ -88,6 +91,8 @@ build: ## Build + sobe todos os serviços
 	@$(DC_REDIS) up -d
 	@echo "▶ Math (build)..."
 	@$(DC_MATH) up --build -d
+	@echo "▶ History (build)..."
+	@$(DC_HISTORY) up --build -d
 	@echo "▶ CS (build)..."
 	@$(DC_CS) up --build -d
 	@sleep 5
@@ -126,6 +131,8 @@ deploy: ## 🚀 Tudo automatico: clone/pull + .envs + build + sobe
 	@$(DC_REDIS) up -d
 	@echo "▶ Math (build)..."
 	@$(DC_MATH) up --build -d
+	@echo "▶ History (build)..."
+	@$(DC_HISTORY) up --build -d
 	@echo "▶ CS (build)..."
 	@$(DC_CS) up --build -d
 	@sleep 5
@@ -153,6 +160,7 @@ stop: ## Para todos os serviços
 	@$(DC_LOUNGE) down
 	@$(DC_RGS) down
 	@$(DC_MATH) down
+	@$(DC_HISTORY) down
 	@$(DC_CS) down
 	@$(DC_REDIS) down
 	@$(DC_MYSQL) down
@@ -209,6 +217,9 @@ monitor: ## Monitor em tempo real dos containers (atualiza a cada 2s)
 
 log-math: ## Logs do Math ZMQ (follow)
 	@$(DC_MATH) logs -f
+
+log-history: ## Logs do History (follow)
+	@$(DC_HISTORY) logs -f
 
 erase: stop ## Para tudo e limpa imagens/volumes Docker
 	@docker system prune -f

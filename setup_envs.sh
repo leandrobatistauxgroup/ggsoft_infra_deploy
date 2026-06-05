@@ -84,5 +84,13 @@ cat > "$BASE/ggsoft_core_math_slot/.env" << EOF
 SERVER_PORT=49235
 EOF
 
+echo "==> Criando .env: ggsoft_core_history"
+cat > "$BASE/ggsoft_core_history/.env" << EOF
+REDIS_SERVER=ggsoft_infra_redis-redis-1
+REDIS_PASSWORD=$REDIS_PASSWORD
+REDIS_PORT=$REDIS_PORT
+API_SECRET_KEY=$HISTORY_SECRET_KEY
+EOF
+
 echo ""
 echo "✅ Todos os .env criados com sucesso!"
