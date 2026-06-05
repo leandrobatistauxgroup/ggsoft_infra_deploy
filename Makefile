@@ -106,6 +106,23 @@ build: ## Build + sobe todos os serviços
 	@echo "✅ Build completo!"
 
 deploy: ## 🚀 Tudo automatico: clone/pull + .envs + build + sobe
+	@if [ ! -f "$(DEPLOY_DIR)/ggsoft.env" ]; then \
+		echo ""; \
+		echo "❌ ERRO: arquivo ggsoft.env não encontrado!"; \
+		echo ""; \
+		echo "   Execute:"; \
+		echo "   cp ggsoft.env.example ggsoft.env"; \
+		echo "   nano ggsoft.env   # preencha as senhas"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@if grep -q "ALTERE_" "$(DEPLOY_DIR)/ggsoft.env"; then \
+		echo ""; \
+		echo "❌ ERRO: ggsoft.env ainda tem valores não preenchidos (ALTERE_*)!"; \
+		echo "   Edite o arquivo antes de continuar: nano ggsoft.env"; \
+		echo ""; \
+		exit 1; \
+	fi
 	@echo "\n========================================"
 	@echo "  GGSoft Deploy - inicio"
 	@echo "========================================\n"
