@@ -35,12 +35,14 @@ clone: ## Clona todos os repositórios em ./ggsoft/
 				echo "╠══════════════════════════════════════════════════════════╣"; \
 				echo "║  Não foi possível clonar: $$repo                        ║"; \
 				echo "║                                                          ║"; \
-				echo "║  A chave SSH deste servidor não está autorizada.         ║"; \
+				echo "║  A chave SSH deste servidor não está cadastrada no       ║"; \
+				echo "║  repositório GGSoft.                                     ║"; \
 				echo "║                                                          ║"; \
-				echo "║  Entre em contato com o suporte GGSoft e forneça        ║"; \
-				echo "║  a chave pública SSH deste servidor:                     ║"; \
+				echo "║  1. Exiba a chave pública deste servidor:                ║"; \
+				echo "║     cat ~/.ssh/ggsoft.pub                                ║"; \
 				echo "║                                                          ║"; \
-				echo "║    cat ~/.ssh/ggsoft.pub                                 ║"; \
+				echo "║  2. Acesse o GitHub da organização GGSoft e cadastre     ║"; \
+				echo "║     a chave em: Settings → Deploy Keys → Add deploy key ║"; \
 				echo "║                                                          ║"; \
 				echo "║  Consulte o README.md para instruções completas.         ║"; \
 				echo "╚══════════════════════════════════════════════════════════╝"; \

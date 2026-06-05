@@ -15,7 +15,7 @@ Este repositório contém tudo que é necessário para subir a plataforma GGSoft
 
 ## Acesso SSH aos repositórios
 
-Os repositórios dos serviços GGSoft são privados. Para que o `make deploy` consiga cloná-los, a chave SSH do servidor precisa estar autorizada na organização GGSoft.
+Os repositórios dos serviços GGSoft são privados. Para que o `make deploy` consiga cloná-los, a chave SSH do servidor precisa estar cadastrada na organização GGSoft no GitHub.
 
 **Antes de continuar, siga os passos abaixo:**
 
@@ -29,8 +29,11 @@ Os repositórios dos serviços GGSoft são privados. Para que o `make deploy` co
    cat ~/.ssh/ggsoft.pub
    ```
 
-3. **Envie essa chave para o suporte GGSoft** para ser adicionada à organização.
-   > Entre em contato antes de prosseguir. Sem essa liberação o deploy irá falhar no clone dos repositórios.
+3. **Cadastre essa chave no GitHub da organização GGSoft:**
+   - Acesse: `https://github.com/GGSoftBR`
+   - Vá em **Settings → Deploy Keys → Add deploy key**
+   - Cole o conteúdo da chave pública e salve
+   > Você precisa ter acesso de administrador à organização para realizar esse passo.
 
 4. Adicione ao `~/.ssh/config`:
    ```
