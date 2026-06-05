@@ -20,7 +20,7 @@ DC_RGS     := docker-compose -f $(BASE)/ggsoft_core_rgs_slot3x3/docker-compose.y
 DC_MATH    := docker-compose -f $(BASE)/ggsoft_core_math_slot/docker-compose.yml
 DC_NGINX   := docker-compose -f $(BASE)/ggsoft_infra_nginx/docker-compose.yml
 
-.PHONY: help clone pull env up build run deploy stop restart log log-mysql log-redis log-cs log-lounge log-rgs log-nginx status erase
+.PHONY: help clone pull env up build run deploy stop restart log log-mysql log-redis log-cs log-lounge log-rgs log-nginx log-math monitor status erase
 
 clone: ## Clona todos os repositórios em ./ggsoft/
 	@mkdir -p $(BASE)
@@ -188,6 +188,27 @@ log-rgs: ## Logs do RGS Slot (follow)
 
 log-nginx: ## Logs do Nginx (follow)
 	@$(DC_NGINX) logs -f
+
+monitor: ## Monitor em tempo real dos containers (atualiza a cada 2s)
+	@watch -n 2 -c '\
+		echo "\033[1;36m╔══════════════════════════════════════════════════════════╗\033[0m"; \
+		echo "\033[1;36m║           GGSoft - Monitor de Containers                ║\033[0m"; \
+		echo "\033[1;36m╚══════════════════════════════════════════════════════════╝\033[0m"; \
+		echo ""; \
+		docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null | awk \
+		  "NR==1{print \"\033[1;33m\" \$$0 \"\033[0m\"; next} \
+		   /Up/{print \"\033[1;32m✔  \" \$$0 \"\033[0m\"; next} \
+		   /Exit|Restarting|Dead/{print \"\033[1;31m✖  \" \$$0 \"\033[0m\"; next} \
+		   {print \"   \" \$$0}"; \
+		echo ""; \
+		echo "\033[0;37m  Lounge  → http://localhost:23458\033[0m"; \
+		echo "\033[0;37m  Nginx   → http://localhost:8001\033[0m"; \
+		echo "\033[0;37m  CS      → http://localhost:8888\033[0m"; \
+		echo "\033[0;37m  Ctrl+C para sair\033[0m"; \
+	'
+
+log-math: ## Logs do Math ZMQ (follow)
+	@$(DC_MATH) logs -f
 
 erase: stop ## Para tudo e limpa imagens/volumes Docker
 	@docker system prune -f
