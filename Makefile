@@ -6,6 +6,7 @@ REPOS := \
 	ggsoft_infra_mysql \
 	ggsoft_infra_redis \
 	ggsoft_infra_nginx \
+	ggsoft_infra_nginx_proxy_https \
 	ggsoft_core_cs \
 	ggsoft_core_lounge \
 	ggsoft_core_rgs_slot3x3 \
@@ -19,9 +20,10 @@ DC_LOUNGE  := docker-compose -f $(BASE)/ggsoft_core_lounge/docker-compose.yml
 DC_RGS     := docker-compose -f $(BASE)/ggsoft_core_rgs_slot3x3/docker-compose.yml
 DC_MATH    := docker-compose -f $(BASE)/ggsoft_core_math_slot/docker-compose.yml
 DC_HISTORY := docker-compose -f $(BASE)/ggsoft_core_history/docker-compose.yml
-DC_NGINX   := docker-compose -f $(BASE)/ggsoft_infra_nginx/docker-compose.yml
+DC_NGINX         := docker-compose -f $(BASE)/ggsoft_infra_nginx/docker-compose.yml
+DC_NGINX_PROXY   := docker-compose -f $(BASE)/ggsoft_infra_nginx_proxy_https/docker-compose.yml
 
-.PHONY: help clone pull env up build run deploy stop restart log log-mysql log-redis log-cs log-lounge log-rgs log-nginx log-math log-history monitor status erase
+.PHONY: help clone pull env up build run deploy stop restart log log-mysql log-redis log-cs log-lounge log-rgs log-nginx log-nginx-proxy log-math log-history monitor status erase
 
 clone: ## Clona todos os repositórios em ./ggsoft/
 	@mkdir -p $(BASE)
@@ -93,6 +95,8 @@ up: ## Sobe todos os serviços (sem rebuild)
 	@$(DC_LOUNGE) up -d
 	@echo "▶ Nginx..."
 	@$(DC_NGINX) up -d
+	@echo "▶ Nginx Proxy HTTPS..."
+	@$(DC_NGINX_PROXY) up -d
 	@echo ""
 	@echo "✅ Todos no ar!"
 	@echo "   Lounge  → http://localhost:23458"
@@ -122,6 +126,8 @@ build: ## Build + sobe todos os serviços
 	@$(DC_LOUNGE) up --build -d
 	@echo "▶ Nginx..."
 	@$(DC_NGINX) up -d
+	@echo "▶ Nginx Proxy HTTPS..."
+	@$(DC_NGINX_PROXY) up -d
 	@echo ""
 	@echo "✅ Build completo!"
 
@@ -179,6 +185,8 @@ deploy: ## 🚀 Tudo automatico: clone/pull + .envs + build + sobe
 	@$(DC_LOUNGE) up --build -d
 	@echo "▶ Nginx..."
 	@$(DC_NGINX) up -d
+	@echo "▶ Nginx Proxy HTTPS..."
+	@$(DC_NGINX_PROXY) up -d
 	@echo "\n========================================"
 	@echo "  ✅ GGSoft no ar!"
 	@echo "  Lounge  → http://localhost:23458"
@@ -193,6 +201,7 @@ deploy: ## 🚀 Tudo automatico: clone/pull + .envs + build + sobe
 run: env build ## Cria .envs + build + sobe tudo
 
 stop: ## Para todos os serviços
+	@$(DC_NGINX_PROXY) down
 	@$(DC_NGINX) down
 	@$(DC_LOUNGE) down
 	@$(DC_RGS) down
@@ -215,6 +224,7 @@ log: ## Logs de todos (últimas 20 linhas de cada)
 	@echo "=== RGS ===" && $(DC_RGS) logs --tail=20
 	@echo "=== Lounge ===" && $(DC_LOUNGE) logs --tail=20
 	@echo "=== Nginx ===" && $(DC_NGINX) logs --tail=20
+	@echo "=== Nginx Proxy HTTPS ===" && $(DC_NGINX_PROXY) logs --tail=20
 
 log-mysql: ## Logs do MySQL (follow)
 	@$(DC_MYSQL) logs -f
@@ -233,6 +243,9 @@ log-rgs: ## Logs do RGS Slot (follow)
 
 log-nginx: ## Logs do Nginx (follow)
 	@$(DC_NGINX) logs -f
+
+log-nginx-proxy: ## Logs do Nginx Proxy HTTPS (follow)
+	@$(DC_NGINX_PROXY) logs -f
 
 monitor: ## Monitor em tempo real dos containers (atualiza a cada 2s)
 	@watch -n 2 -c '\
