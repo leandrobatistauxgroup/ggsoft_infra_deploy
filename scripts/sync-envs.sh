@@ -5,8 +5,9 @@
 
 set -e
 
-ENVS_DIR="${ENVS_DIR:-./envs}"
-WORKSPACE_DIR="/Users/leandrobatista/Desktop/ux-ggsoft"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENVS_DIR="${ENVS_DIR:-$SCRIPT_DIR/../envs}"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'

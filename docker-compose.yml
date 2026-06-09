@@ -211,7 +211,7 @@ services:
       - "127.0.0.1:2555:2555"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /Users/leandrobatista/Desktop/ux-ggsoft:/Users/leandrobatista/Desktop/ux-ggsoft
+      - ${WORKSPACE_DIR:-..}:${WORKSPACE_DIR:-/workspace}
     networks:
       - rede-ggsoft
     restart: unless-stopped

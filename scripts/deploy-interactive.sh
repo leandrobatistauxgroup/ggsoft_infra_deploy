@@ -293,7 +293,7 @@ cat > "$ENVS_DIR/system-control.env" << EOF
 # =============================================================================
 
 # Path ABSOLUTO do workspace no host
-WORKSPACE_DIR=/Users/leandrobatista/Desktop/ux-ggsoft
+WORKSPACE_DIR=$(cd "$(dirname "$0")/../.." && pwd)
 
 # Porta do painel (host bind em 127.0.0.1)
 PANEL_PORT=${PANEL_PORT}
