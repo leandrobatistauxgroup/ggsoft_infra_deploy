@@ -21,12 +21,12 @@ Os repositórios dos serviços GGSoft são privados. Para que o `make deploy` co
 
 1. Gere uma chave SSH no servidor (se ainda não tiver):
    ```bash
-   ssh-keygen -t ed25519 -C "deploy@seuservidor" -f ~/.ssh/ggsoft
+   ssh-keygen -t ed25519 -C "deploy@seuservidor" -f ~/.ssh/ggsoft_ec2_10_10_42_144
    ```
 
 2. Exiba a chave pública gerada:
    ```bash
-   cat ~/.ssh/ggsoft.pub
+   cat ~/.ssh/ggsoft_ec2_10_10_42_144.pub
    ```
 
 3. **Cadastre essa chave no GitHub da organização GGSoft:**
@@ -40,7 +40,7 @@ Os repositórios dos serviços GGSoft são privados. Para que o `make deploy` co
    Host github-ggsoft
      HostName github.com
      User git
-     IdentityFile ~/.ssh/ggsoft
+     IdentityFile ~/.ssh/ggsoft_ec2_10_10_42_144
      IdentitiesOnly yes
    ```
 

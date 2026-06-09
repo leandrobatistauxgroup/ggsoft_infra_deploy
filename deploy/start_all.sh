@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sobe todos os serviços GGSoft na ordem correta
-# Execute: bash _deploy/start_all.sh
+# Execute: bash _deploy/deploy/start_all.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE="$SCRIPT_DIR/ggsoft"

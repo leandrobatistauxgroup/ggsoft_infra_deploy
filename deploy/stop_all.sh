@@ -1,6 +1,6 @@
 #!/bin/bash
 # Para todos os serviços GGSoft
-# Execute: bash _deploy/stop_all.sh
+# Execute: bash _deploy/deploy/stop_all.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE="$SCRIPT_DIR/ggsoft"

@@ -1,4 +1,3 @@
-VERSION    := 1.1.0
 DEPLOY_DIR := $(shell pwd)
 BASE       := $(DEPLOY_DIR)/ggsoft
 GIT        := git@github-ggsoft:GGSoftBR
@@ -14,15 +13,15 @@ REPOS := \
 	ggsoft_core_math_slot \
 	ggsoft_core_history
 
-DC_MYSQL   := docker compose -f $(BASE)/ggsoft_infra_mysql/docker-compose.yml
-DC_REDIS   := docker compose -f $(BASE)/ggsoft_infra_redis/docker-compose.yml
-DC_CS      := docker compose -f $(BASE)/ggsoft_core_cs/cs/docker-compose.yml
-DC_LOUNGE  := docker compose -f $(BASE)/ggsoft_core_lounge/docker-compose.yml
-DC_RGS     := docker compose -f $(BASE)/ggsoft_core_rgs_slot3x3/docker-compose.yml
-DC_MATH    := docker compose -f $(BASE)/ggsoft_core_math_slot/docker-compose.yml
-DC_HISTORY := docker compose -f $(BASE)/ggsoft_core_history/docker-compose.yml
-DC_NGINX         := docker compose -f $(BASE)/ggsoft_infra_nginx/docker-compose.yml
-DC_NGINX_PROXY   := docker compose -f $(BASE)/ggsoft_infra_nginx_proxy_https/docker-compose.yml
+DC_MYSQL   := docker compose -f $(BASE)/ggsoft_infra_mysql/docker compose.yml
+DC_REDIS   := docker compose -f $(BASE)/ggsoft_infra_redis/docker compose.yml
+DC_CS      := docker compose -f $(BASE)/ggsoft_core_cs/cs/docker compose.yml
+DC_LOUNGE  := docker compose -f $(BASE)/ggsoft_core_lounge/docker compose.yml
+DC_RGS     := docker compose -f $(BASE)/ggsoft_core_rgs_slot3x3/docker compose.yml
+DC_MATH    := docker compose -f $(BASE)/ggsoft_core_math_slot/docker compose.yml
+DC_HISTORY := docker compose -f $(BASE)/ggsoft_core_history/docker compose.yml
+DC_NGINX         := docker compose -f $(BASE)/ggsoft_infra_nginx/docker compose.yml
+DC_NGINX_PROXY   := docker compose -f $(BASE)/ggsoft_infra_nginx_proxy_https/docker compose.yml
 
 .PHONY: help clone pull env up build run deploy stop restart log log-mysql log-redis log-cs log-lounge log-rgs log-nginx log-nginx-proxy log-math log-history monitor status erase
 
@@ -151,7 +150,7 @@ deploy: ## 🚀 Tudo automatico: clone/pull + .envs + build + sobe
 		exit 1; \
 	fi
 	@echo "\n========================================"
-	@echo "  GGSoft Deploy - inicio (v$(VERSION))"
+	@echo "  GGSoft Deploy - inicio"
 	@echo "========================================\n"
 	@mkdir -p $(BASE)
 	@for repo in $(REPOS); do \
