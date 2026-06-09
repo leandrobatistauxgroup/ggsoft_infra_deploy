@@ -3,7 +3,7 @@
 # =============================================================================
 # Orquestração unificada de todos os serviços GGSoft
 # 
-# ORDEM DE SUBIDA (gerenciada automaticamente pelo docker-compose):
+# ORDEM DE SUBIDA (gerenciada automaticamente pelo docker compose):
 #   1. Infra: mysql, redis
 #   2. Apps: wallet-auth, history, math
 #   3. Game: rgs-fruit
@@ -87,71 +87,71 @@ start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend
 	@echo "$(BLUE)Criando rede Docker rede-ggsoft...$(NC)"
 	@docker network create rede-ggsoft 2>/dev/null || echo "   Rede já existe"
 	@echo "$(BLUE)Fase 1/4: Infraestrutura (mysql, redis)...$(NC)"
-	@docker-compose up -d $(INFRA_SERVICES)
+	@docker compose up -d $(INFRA_SERVICES)
 	@echo "$(BLUE)Aguardando healthcheck da infra...$(NC)"
 	@sleep 5
 	@echo "$(BLUE)Fase 2/4: Build das aplicações...$(NC)"
-	@docker-compose build $(APPS_SERVICES)
+	@docker compose build $(APPS_SERVICES)
 	@echo "$(BLUE)Fase 3/4: Subindo aplicações...$(NC)"
-	@docker-compose up -d $(APPS_SERVICES)
+	@docker compose up -d $(APPS_SERVICES)
 	@echo "$(BLUE)Aguardando healthcheck das aplicações...$(NC)"
 	@sleep 10
 	@echo "$(BLUE)Fase 4/4: Game Server (RGS)...$(NC)"
-	@docker-compose up -d $(GAME_SERVICES)
+	@docker compose up -d $(GAME_SERVICES)
 	@echo "$(BLUE)Aguardando RGS...$(NC)"
 	@sleep 5
 	@echo "$(BLUE)Subindo Frontend (nginx, system-control)...$(NC)"
-	@docker-compose up -d $(FRONTEND_SERVICES)
+	@docker compose up -d $(FRONTEND_SERVICES)
 	@echo "$(GREEN)=== Todos os serviços iniciados ===$(NC)"
 	@make status
 
 start-infra: ## Inicia só a infraestrutura (mysql, redis)
 	@echo "$(BLUE)=== Iniciando infraestrutura ===$(NC)"
-	docker-compose up -d $(INFRA_SERVICES)
+	docker compose up -d $(INFRA_SERVICES)
 
 start-apps: ## Inicia aplicações (dependem da infra)
 	@echo "$(BLUE)=== Iniciando aplicações ===$(NC)"
-	docker-compose up -d $(APPS_SERVICES)
+	docker compose up -d $(APPS_SERVICES)
 
 start-rgs: ## Inicia game server (depende das apps)
 	@echo "$(BLUE)=== Iniciando RGS ===$(NC)"
 	@make init-build
-	docker-compose up -d $(GAME_SERVICES)
+	docker compose up -d $(GAME_SERVICES)
 
 wait-health: ## Aguarda todos os healthchecks passarem
 	@echo "$(BLUE)=== Aguardando healthchecks ===$(NC)"
-	@docker-compose ps --format "table {{.Name}}\t{{.Status}}"
+	@docker compose ps --format "table {{.Name}}\t{{.Status}}"
 
 stop: ## Para todos os serviços
 	@echo "$(YELLOW)=== Parando plataforma GGSoft ===$(NC)"
-	docker-compose down
+	docker compose down
 
 restart: ## Reinicia todos os serviços
 	@echo "$(YELLOW)=== Reiniciando plataforma GGSoft ===$(NC)"
-	docker-compose restart
+	docker compose restart
 
 logs: ## Mostra logs de todos os serviços
-	docker-compose logs -f
+	docker compose logs -f
 
 status: ## Mostra status dos serviços
 	@echo "$(GREEN)=== Status dos serviços ===$(NC)"
-	@docker-compose ps
+	@docker compose ps
 
 health: ## Mostra status dos healthchecks
 	@echo "$(GREEN)=== Healthchecks ===$(NC)"
-	@docker-compose ps
+	@docker compose ps
 
 test: ## Executa testes do wallet-auth
 	@echo "$(GREEN)=== Executando testes ===$(NC)"
-	docker-compose up -d mysql-test
+	docker compose up -d mysql-test
 	@sleep 5
-	docker-compose run --rm wallet-auth-tests
+	docker compose run --rm wallet-auth-tests
 
 clean: ## Remove containers, volumes e rede (⚠️ Dados serão perdidos!)
 	@echo "$(RED)=== ATENÇÃO: Isso removerá TODOS os dados! ===$(NC)"
 	@read -p "Digite 'SIM' para confirmar: " confirm && \
 	if [ "$${confirm}" = "SIM" ]; then \
-		docker-compose down -v; \
+		docker compose down -v; \
 		docker network rm rede-ggsoft 2>/dev/null || true; \
 		echo "$(GREEN)Limpeza concluída$(NC)"; \
 	else \

@@ -54,7 +54,7 @@ TEST_FAILED=0
 echo -e "${YELLOW}🧪 Testando wallet-auth...${NC}"
 
 # Sobe MySQL de teste
-if ! docker-compose up -d mysql-test 2>&1 | tee -a "$TEST_OUTPUT"; then
+if ! docker compose up -d mysql-test 2>&1 | tee -a "$TEST_OUTPUT"; then
     echo -e "${RED}❌ Falha ao subir MySQL de teste${NC}"
     TEST_FAILED=1
 fi
@@ -63,8 +63,8 @@ fi
 sleep 5
 
 # Executa testes wallet-auth
-echo -e "${YELLOW}Running: docker-compose run --rm wallet-auth-tests${NC}" | tee -a "$TEST_OUTPUT"
-if ! docker-compose run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
+echo -e "${YELLOW}Running: docker compose run --rm wallet-auth-tests${NC}" | tee -a "$TEST_OUTPUT"
+if ! docker compose run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
     echo -e "${RED}❌ Testes do wallet-auth falharam${NC}"
     TEST_FAILED=1
 fi
@@ -78,10 +78,10 @@ echo -e "${BLUE}=== FASE 2/4: Testes de Integração End-to-End ===${NC}"
 echo ""
 
 echo -e "${YELLOW}🧪 Testando integração de serviços...${NC}"
-echo -e "${YELLOW}Running: docker-compose --profile integration-test run --rm integration-tests${NC}" | tee -a "$TEST_OUTPUT"
+echo -e "${YELLOW}Running: docker compose --profile integration-test run --rm integration-tests${NC}" | tee -a "$TEST_OUTPUT"
 
 # Sobe os serviços de produção primeiro
-if ! docker-compose up -d mysql wallet-auth history rgs-fruit nginx 2>&1 | tee -a "$TEST_OUTPUT"; then
+if ! docker compose up -d mysql wallet-auth history rgs-fruit nginx 2>&1 | tee -a "$TEST_OUTPUT"; then
     echo -e "${YELLOW}⚠️  Serviços já rodando ou erro ao subir${NC}"
 fi
 
@@ -89,7 +89,7 @@ fi
 sleep 10
 
 # Executa testes de integração
-if ! docker-compose --profile integration-test run --rm integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
+if ! docker compose --profile integration-test run --rm integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
     echo -e "${RED}❌ Testes de integração falharam${NC}"
     TEST_FAILED=1
 else
@@ -97,7 +97,7 @@ else
 fi
 
 # Limpa recursos de teste
-docker-compose down 2>/dev/null || true
+docker compose down 2>/dev/null || true
 
 # =============================================================================
 # FASE 3: ANÁLISE DE RESULTADOS
@@ -325,7 +325,7 @@ if [ "$RGS_GAME_NAME" = "fruits" ]; then
     echo -e "${GREEN}✅ RGS GAME_NAME configurado: $RGS_GAME_NAME${NC}"
 else
     echo -e "${RED}❌ RGS GAME_NAME incorreto ou não definido: '$RGS_GAME_NAME' (esperado: fruits)${NC}"
-    echo -e "${YELLOW}   Verificar docker-compose.yml - environment: GAME_NAME${NC}"
+    echo -e "${YELLOW}   Verificar docker compose.yml - environment: GAME_NAME${NC}"
 fi
 
 # Testa conectividade RGS -> History

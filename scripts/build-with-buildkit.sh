@@ -30,12 +30,12 @@ if docker buildx version &>/dev/null; then
     fi
 fi
 
-# Build com docker-compose
+# Build com docker compose
 echo -e "${BLUE}Executando build...${NC}"
 cd "$(dirname "$0")/.."
-docker-compose build --progress plain "$@" 2>&1 || {
+docker compose build --progress plain "$@" 2>&1 || {
     echo -e "${RED}✗ Build falhou, tentando método alternativo...${NC}"
-    docker-compose build "$@" 2>&1
+    docker compose build "$@" 2>&1
 }
 
 echo -e "${GREEN}✓ Build concluído${NC}"
