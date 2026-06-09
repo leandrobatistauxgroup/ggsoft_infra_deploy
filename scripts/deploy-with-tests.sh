@@ -21,6 +21,10 @@ if [ $MISSING -eq 1 ]; then
     echo -e "\033[0;33m⚠  Repositórios ausentes — executando clone automático...\033[0m"
     "$SCRIPT_DIR/setup-repos.sh"
 fi
+
+# Sincroniza .env para todos os repos antes do build
+"$SCRIPT_DIR/sync-envs.sh"
+
 REPORTS_DIR="./reports"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 REPORT_FILE="${REPORTS_DIR}/deploy_failure_${TIMESTAMP}.md"
