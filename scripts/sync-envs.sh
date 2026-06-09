@@ -19,27 +19,31 @@ echo ""
 
 # MySQL
 echo -e "${YELLOW}🗄️  MySQL → ggsoft_infra_mysql/${NC}"
+mkdir -p "$WORKSPACE_DIR/ggsoft_infra_mysql"
 cp "$ENVS_DIR/mysql.env" "$WORKSPACE_DIR/ggsoft_infra_mysql/.env"
 echo -e "   ${GREEN}✓${NC} Copiado mysql.env"
 
 # Redis
 echo -e "${YELLOW}🔐 Redis → ggsoft_infra_redis/${NC}"
+mkdir -p "$WORKSPACE_DIR/ggsoft_infra_redis"
 cp "$ENVS_DIR/redis.env" "$WORKSPACE_DIR/ggsoft_infra_redis/.env"
 echo -e "   ${GREEN}✓${NC} Copiado redis.env"
 
 # Wallet-Auth (CS)
 echo -e "${YELLOW}💰 Wallet-Auth (CS) → ggsoft_wallet-auth/${NC}"
+mkdir -p "$WORKSPACE_DIR/ggsoft_wallet-auth"
 cp "$ENVS_DIR/wallet-auth.env" "$WORKSPACE_DIR/ggsoft_wallet-auth/.env"
 echo -e "   ${GREEN}✓${NC} Copiado wallet-auth.env"
 
 # History
 echo -e "${YELLOW}📜 History → ggsoft_history/${NC}"
+mkdir -p "$WORKSPACE_DIR/ggsoft_history"
 cp "$ENVS_DIR/history.env" "$WORKSPACE_DIR/ggsoft_history/.env"
 echo -e "   ${GREEN}✓${NC} Copiado history.env"
 
 # Math
 echo -e "${YELLOW}🔢 Math → ggsoft_math_3x3/${NC}"
-# Math usa .env.example como base, vamos criar .env simples
+mkdir -p "$WORKSPACE_DIR/ggsoft_math_3x3"
 cat > "$WORKSPACE_DIR/ggsoft_math_3x3/.env" << EOF
 SERVER_PORT=49235
 EOF
@@ -47,11 +51,13 @@ echo -e "   ${GREEN}✓${NC} Criado math.env (SERVER_PORT=49235)"
 
 # RGS
 echo -e "${YELLOW}🎮 RGS → ggsoft_rgs_3x3/${NC}"
+mkdir -p "$WORKSPACE_DIR/ggsoft_rgs_3x3"
 cp "$ENVS_DIR/rgs.env" "$WORKSPACE_DIR/ggsoft_rgs_3x3/.env"
 echo -e "   ${GREEN}✓${NC} Copiado rgs.env"
 
 # System-Control
 echo -e "${YELLOW}🎛️  System-Control → ggsoft_system-control/${NC}"
+mkdir -p "$WORKSPACE_DIR/ggsoft_system-control"
 cp "$ENVS_DIR/system-control.env" "$WORKSPACE_DIR/ggsoft_system-control/.env"
 echo -e "   ${GREEN}✓${NC} Copiado system-control.env"
 
