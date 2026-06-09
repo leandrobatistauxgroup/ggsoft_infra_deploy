@@ -52,6 +52,10 @@ sync: ## Sincroniza .env do deploy para todos os projetos
 	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
 	@./scripts/sync-envs.sh
 
+clone: ## Clona todos os repositórios da plataforma como irmãos deste diretório
+	@echo "$(BLUE)=== Clonando repositórios GGSoft ===$(NC)"
+	@./scripts/setup-repos.sh
+
 setup: ## Setup inicial - cria rede Docker, verifica envs e garante .build
 	@echo "$(GREEN)=== Setup inicial da plataforma GGSoft ===$(NC)"
 	@echo "$(BLUE)1. Criando rede Docker 'rede-ggsoft'...$(NC)"
