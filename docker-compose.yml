@@ -1,0 +1,308 @@
+# =============================================================================
+# GGSoft - Infraestrutura de Deploy Unificada
+# =============================================================================
+# Este arquivo orquestra todos os serviços da plataforma GGSoft.
+# 
+# Setup inicial:
+#   1. Configure os arquivos .env em cada subdiretório
+#   2. docker network create rede-ggsoft
+#   3. docker compose up -d
+#
+# Serviços:
+#   - mysql: Banco de dados principal (CS1)
+#   - redis: Cache e sessões
+#   - nginx: Reverse proxy e assets estáticos
+#   - wallet-auth (CS): Servidor de crédito/autenticação
+#   - history: Histórico de jogadas
+#   - math: Motor matemático (ZMQ)
+#   - rgs-fruit: Game server (slot fruit)
+#   - system-control: Painel de controle Docker
+# =============================================================================
+
+name: ggsoft_platform
+
+services:
+  # ===========================================================================
+  # INFRAESTRUTURA BASE
+  # ===========================================================================
+
+  mysql:
+    image: mysql:8.4.0
+    container_name: mysql_database
+    env_file:
+      - ./envs/mysql.env
+    ports:
+      - "53306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../ggsoft_infra_mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - rede-ggsoft
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: ggsoft_redis
+    env_file:
+      - ./envs/redis.env
+    command: >
+      sh -c "redis-server /usr/local/etc/redis/redis.conf --requirepass $${REDIS_PASSWORD:-redis123}"
+    expose:
+      - "36380"
+    volumes:
+      - ../ggsoft_infra_redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis_data:/data
+    networks:
+      - rede-ggsoft
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -p 36380 -a $$REDIS_PASSWORD ping | grep -q PONG || redis-cli -p 36380 ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    container_name: ggsoft_nginx
+    ports:
+      - "8001:80"
+    volumes:
+      - ../ggsoft_infra_nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ../ggsoft_infra_nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ../ggsoft_infra_nginx/games:/usr/share/nginx/html/games
+    networks:
+      - rede-ggsoft
+    depends_on:
+      wallet-auth:
+        condition: service_healthy
+      rgs-fruit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ===========================================================================
+  # SERVIÇOS DE APLICAÇÃO
+  # ===========================================================================
+
+  wallet-auth:
+    build:
+      context: ../ggsoft_wallet-auth
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: python-app-wallet-auth
+    env_file:
+      - ./envs/wallet-auth.env
+    ports:
+      - "8888:8888"
+    volumes:
+      - ../ggsoft_wallet-auth/app:/app/app
+      - ../ggsoft_wallet-auth/pem:/app/app/pem
+    networks:
+      - rede-ggsoft
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/ > /dev/null 2>&1 || python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8888/')\" 2>/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  history:
+    build:
+      context: ../ggsoft_history
+      dockerfile: Dockerfile
+    container_name: ggsoft_history
+    env_file:
+      - ./envs/history.env
+    ports:
+      - "8890:8890"
+    networks:
+      - rede-ggsoft
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8890/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  math:
+    build:
+      context: ../ggsoft_math_3x3
+      dockerfile: Dockerfile
+    container_name: ggsoft-zmq-server-slot
+    env_file:
+      - ./envs/math.env
+    expose:
+      - "49235"
+    networks:
+      - rede-ggsoft
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.connect(('127.0.0.1', 49235)); s.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  rgs-fruit:
+    build:
+      context: ../ggsoft_rgs_3x3
+      dockerfile: Dockerfile
+    container_name: rgs-fruit
+    env_file:
+      - ./envs/rgs.env
+    environment:
+      GAME_NAME: "fruits"
+      GAME_CODE: "8"
+      PORT: "43317"
+    ports:
+      - "43317:43317"
+    volumes:
+      - ../ggsoft_rgs_3x3/app:/app
+      - ../ggsoft_rgs_3x3/log:/log
+      - type: bind
+        source: ./.build
+        target: /.build
+    networks:
+      - rede-ggsoft
+    depends_on:
+      wallet-auth:
+        condition: service_healthy
+      math:
+        condition: service_started
+      history:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:43317/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  system-control:
+    build:
+      context: ../ggsoft_system-control
+      dockerfile: Dockerfile
+    container_name: ggsoft_system-control
+    env_file:
+      - ./envs/system-control.env
+    ports:
+      - "127.0.0.1:2555:2555"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /Users/leandrobatista/Desktop/ux-ggsoft:/Users/leandrobatista/Desktop/ux-ggsoft
+    networks:
+      - rede-ggsoft
+    restart: unless-stopped
+
+  # ===========================================================================
+  # TESTES
+  # ===========================================================================
+
+  mysql-test:
+    image: mysql:8.4.0
+    container_name: mysql_test
+    environment:
+      MYSQL_ROOT_PASSWORD: root_test
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: CS1_TEST
+    tmpfs:
+      - /var/lib/mysql
+    networks:
+      - rede-ggsoft
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    profiles:
+      - test
+
+  wallet-auth-tests:
+    build:
+      context: ../ggsoft_wallet-auth
+      dockerfile: Dockerfile
+      target: test
+    container_name: wallet-auth-tests
+    env_file:
+      - ./envs/wallet-auth.env
+    environment:
+      MODE_ENV: TEST
+      MYSQL_HOST: mysql-test
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root_test
+      DATABASE_NAME: CS1_TEST
+      SECRET_KEY: test_secret_key
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+    volumes:
+      - ../ggsoft_wallet-auth/app:/app/app
+      - ../ggsoft_wallet-auth/tests:/app/tests
+      - ../ggsoft_wallet-auth/pyproject.toml:/app/pyproject.toml
+    networks:
+      - rede-ggsoft
+    profiles:
+      - test
+
+  # ===========================================================================
+  # SERVIÇO DE TESTES DE INTEGRAÇÃO (ggsoft_infra_deploy)
+  # ===========================================================================
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    container_name: integration-tests
+    environment:
+      RGS_GAME_NAME: "fruits"
+      RGS_GAME_CODE: "8"
+      RGS_PORT: "43317"
+      HISTORY_API_SECRET: "dXb6uSmXpvFFwq1KTNRjdrwzFS1iEDUZiFsqr0yoMf8Vc8ij"
+      WALLET_MYSQL_HOST: "mysql_database"
+    volumes:
+      - ../ggsoft_wallet-auth/app/mydb/ddl/default:/app/wallet-auth-data:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      wallet-auth:
+        condition: service_healthy
+      history:
+        condition: service_healthy
+      rgs-fruit:
+        condition: service_healthy
+      nginx:
+        condition: service_healthy
+    networks:
+      - rede-ggsoft
+    profiles:
+      - integration-test
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  rede-ggsoft:
+    external: true

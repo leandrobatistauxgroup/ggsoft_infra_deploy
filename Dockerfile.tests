@@ -1,0 +1,9 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir pytest pytest-asyncio aiohttp
+
+COPY tests/ /app/tests/
+
+CMD ["pytest", "tests/", "-v", "--tb=short"]

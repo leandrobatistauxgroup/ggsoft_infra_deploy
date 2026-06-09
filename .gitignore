@@ -1,0 +1,36 @@
+# GGSoft Deploy - Arquivos ignorados
+
+# Relatórios de falha em testes (gerados automaticamente)
+reports/
+*.log
+
+# Arquivo de build do RGS (gerado automaticamente)
+# Nota: .build deve ser arquivo, não pasta
+# Se virar pasta, o build falha
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Docker
+.docker/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporários
+tmp/
+temp/
+*.tmp
+
+*.pem
+*.key
