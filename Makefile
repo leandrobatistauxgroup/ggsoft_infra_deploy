@@ -84,6 +84,8 @@ init-build: ## Garante que .build é arquivo (não pasta) - necessário para RGS
 start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend)
 	@echo "$(GREEN)=== Iniciando plataforma GGSoft (4 fases) ===$(NC)"
 	@make init-build
+	@echo "$(BLUE)Limpando containers anteriores...$(NC)"
+	@docker compose down 2>/dev/null || true
 	@echo "$(BLUE)Criando rede Docker rede-ggsoft...$(NC)"
 	@docker network create rede-ggsoft 2>/dev/null || echo "   Rede já existe"
 	@echo "$(BLUE)Fase 1/4: Infraestrutura (mysql, redis)...$(NC)"
