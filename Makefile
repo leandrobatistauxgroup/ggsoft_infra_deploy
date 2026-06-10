@@ -62,12 +62,18 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 		echo "$(GREEN)✓ SERVER_IP configurado: $$CURRENT_IP$(NC)"; \
 	fi
 	@echo "$(BLUE)3. Configuração interativa (senhas, usuários)...$(NC)"
-	@./scripts/deploy-interactive.sh $(DEPLOY_FLAGS) || true
+	@./scripts/deploy-interactive.sh $(FLAGS) || true
 	@./scripts/deploy-with-tests.sh
 	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
 	@./scripts/sync-envs.sh
 	@echo "$(GREEN)=== Iniciando todos os serviços ===${NC}"
 	@make start
+
+deploy-y: ## Deploy com auto-yes (mantém configs ou aceita defaults)
+	@$(MAKE) deploy FLAGS=-y
+
+deploy-n: ## Deploy com auto-no (recria tudo com padrões e limpa volumes)
+	@$(MAKE) deploy FLAGS=-n
 
 deploy-quick: ## Deploy rápido sem testes - atualiza _deploy + envs + sync + start
 	@echo "$(YELLOW)=== Deploy GGSoft SEM testes ===${NC}"
