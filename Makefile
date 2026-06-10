@@ -196,17 +196,14 @@ start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend
 	if [ -n "$$CONFLITOS" ]; then \
 		echo "$(YELLOW)⚠️  Containers usando portas da plataforma:$(NC)"; \
 		printf "$$CONFLITOS\n"; \
-		read -p "Parar todos antes de iniciar? [Y/n]: " CONFIRM; \
-		CONFIRM=$${CONFIRM:-Y}; \
-		if echo "$$CONFIRM" | grep -qi "^y"; then \
-			for port in $$PORTS; do \
-				cname=$$(docker ps --filter "publish=$$port" --format '{{.Names}}' 2>/dev/null | head -1); \
-				[ -n "$$cname" ] && docker stop "$$cname" && docker rm "$$cname" 2>/dev/null || true; \
-			done; \
-			docker compose down 2>/dev/null || true; \
-			docker compose --profile test down 2>/dev/null || true; \
-			docker compose --profile integration-test down 2>/dev/null || true; \
-		fi; \
+		echo "$(BLUE)Derrubando containers automaticamente...$(NC)"; \
+		for port in $$PORTS; do \
+			cname=$$(docker ps --filter "publish=$$port" --format '{{.Names}}' 2>/dev/null | head -1); \
+			[ -n "$$cname" ] && docker stop "$$cname" && docker rm "$$cname" 2>/dev/null || true; \
+		done; \
+		docker compose down 2>/dev/null || true; \
+		docker compose --profile test down 2>/dev/null || true; \
+		docker compose --profile integration-test down 2>/dev/null || true; \
 	fi
 	@echo "$(BLUE)Criando rede Docker rede-ggsoft...$(NC)"
 	@docker network create rede-ggsoft 2>/dev/null || echo "   Rede já existe"
