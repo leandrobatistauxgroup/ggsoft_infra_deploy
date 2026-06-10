@@ -213,8 +213,10 @@ start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend
 	@docker compose up -d $(GAME_SERVICES)
 	@echo "$(BLUE)Aguardando RGS...$(NC)"
 	@sleep 5
+	@echo "$(BLUE)Build do Frontend (system-control)...$(NC)"
+	@docker compose build --no-cache system-control
 	@echo "$(BLUE)Subindo Frontend (nginx, system-control)...$(NC)"
-	@docker compose up -d $(FRONTEND_SERVICES)
+	@docker compose up -d --force-recreate $(FRONTEND_SERVICES)
 	@echo "$(GREEN)=== Todos os serviços iniciados ===$(NC)"
 	@make status
 
