@@ -73,8 +73,8 @@ if ! docker compose run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; the
     TEST_FAILED=1
 fi
 
-# Limpa containers de teste antes de subir produção
-docker compose --profile test down 2>/dev/null || true
+# Limpa todos os containers antes de subir produção
+docker compose down 2>/dev/null || true
 
 # =============================================================================
 # FASE 2: TESTES DE INTEGRAÇÃO END-TO-END (infra_deploy)
