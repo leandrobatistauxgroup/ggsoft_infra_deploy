@@ -73,8 +73,22 @@ if ! docker compose run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; the
     TEST_FAILED=1
 fi
 
-# Limpa todos os containers antes de subir produção
-docker compose down 2>/dev/null || true
+# Verifica containers rodando e pede confirmação antes de derrubar
+RUNNING=$(docker compose ps --status running --format '{{.Name}} (porta: {{.Ports}})' 2>/dev/null | grep -v '^$' || true)
+if [ -n "$RUNNING" ]; then
+    echo ""
+    echo -e "${YELLOW}⚠️  Containers em execução detectados:${NC}"
+    echo "$RUNNING" | while read -r line; do echo "   • $line"; done
+    echo ""
+    read -p "Derrubar todos antes de subir produção? [Y/n]: " CONFIRM_DOWN
+    CONFIRM_DOWN=${CONFIRM_DOWN:-Y}
+    if [[ "$CONFIRM_DOWN" =~ ^[Yy]$ ]]; then
+        echo -e "${BLUE}Derrubando containers...${NC}"
+        docker compose down 2>/dev/null || true
+    else
+        echo -e "${YELLOW}Mantendo containers. Tentando subir em paralelo...${NC}"
+    fi
+fi
 
 # =============================================================================
 # FASE 2: TESTES DE INTEGRAÇÃO END-TO-END (infra_deploy)
