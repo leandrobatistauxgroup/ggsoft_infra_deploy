@@ -73,6 +73,9 @@ if ! docker compose run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; the
     TEST_FAILED=1
 fi
 
+# Limpa containers de teste antes de subir produção
+docker compose --profile test down 2>/dev/null || true
+
 # =============================================================================
 # FASE 2: TESTES DE INTEGRAÇÃO END-TO-END (infra_deploy)
 # =============================================================================
@@ -84,9 +87,10 @@ echo ""
 echo -e "${YELLOW}🧪 Testando integração de serviços...${NC}"
 echo -e "${YELLOW}Running: docker compose --profile integration-test run --rm integration-tests${NC}" | tee -a "$TEST_OUTPUT"
 
-# Sobe os serviços de produção primeiro
+# Sobe os serviços de produção
 if ! docker compose up -d mysql wallet-auth history rgs-fruit nginx 2>&1 | tee -a "$TEST_OUTPUT"; then
-    echo -e "${YELLOW}⚠️  Serviços já rodando ou erro ao subir${NC}"
+    echo -e "${RED}❌ Falha ao subir serviços — verifique conflito de portas${NC}"
+    TEST_FAILED=1
 fi
 
 # Aguarda serviços ficarem healthy
