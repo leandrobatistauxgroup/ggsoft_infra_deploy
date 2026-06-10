@@ -49,14 +49,25 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	@echo "$(BLUE)2. Verificando SERVER_IP...$(NC)"
 	@CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
 	if [ -z "$$CURRENT_IP" ] || [ "$$CURRENT_IP" = "localhost" ] || [ "$$CURRENT_IP" = "$${SERVER_IP:-localhost}" ]; then \
-		HOSTNAME=$$(hostname | tr '[:upper:]' '[:lower:]'); \
-		if echo "$$HOSTNAME" | grep -q "local"; then \
-			echo "$(GREEN)✓ Hostname '$$HOSTNAME' contém 'local' — usando SERVER_IP=localhost$(NC)"; \
-			sed -i "s/^SERVER_IP=.*/SERVER_IP=localhost/" $(ENVS_DIR)/system-control.env; \
+		if [ "$(FLAGS)" = "-n" ]; then \
+			DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' || echo ""); \
+			if [ -n "$$DETECTED_IP" ]; then \
+				echo "$(GREEN)✓ Modo -n: IP detectado automaticamente: $$DETECTED_IP$(NC)"; \
+				sed -i "s/^SERVER_IP=.*/SERVER_IP=$$DETECTED_IP/" $(ENVS_DIR)/system-control.env; \
+			else \
+				echo "$(RED)❌ Não foi possível detectar IP automaticamente$(NC)"; \
+				exit 1; \
+			fi; \
 		else \
-			echo "$(YELLOW)⚠️  SERVER_IP não configurado$(NC)"; \
-			echo "$(YELLOW)   Execute: make set-server-ip$(NC)"; \
-			exit 1; \
+			HOSTNAME=$$(hostname | tr '[:upper:]' '[:lower:]'); \
+			if echo "$$HOSTNAME" | grep -q "local"; then \
+				echo "$(GREEN)✓ Hostname '$$HOSTNAME' contém 'local' — usando SERVER_IP=localhost$(NC)"; \
+				sed -i "s/^SERVER_IP=.*/SERVER_IP=localhost/" $(ENVS_DIR)/system-control.env; \
+			else \
+				echo "$(YELLOW)⚠️  SERVER_IP não configurado$(NC)"; \
+				echo "$(YELLOW)   Execute: make set-server-ip$(NC)"; \
+				exit 1; \
+			fi; \
 		fi; \
 	else \
 		echo "$(GREEN)✓ SERVER_IP configurado: $$CURRENT_IP$(NC)"; \
