@@ -19,12 +19,17 @@ echo "║           GGSoft Platform - Deploy Interativo                 ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-# Se .env já existir com senha personalizada, não altera nada
+# Se .env já existir com senha personalizada, pergunta se quer manter ou recriar
 if [ -f "$ENVS_DIR/mysql.env" ]; then
     CURRENT_PASSWORD=$(grep "^MYSQL_PASSWORD=" "$ENVS_DIR/mysql.env" 2>/dev/null | cut -d'=' -f2 | tr -d "'\"" || echo "")
     if [ -n "$CURRENT_PASSWORD" ] && [ "$CURRENT_PASSWORD" != "ggsoft_password_change_me" ]; then
-        echo -e "${GREEN}✅ Arquivos .env já existem com configurações personalizadas — mantendo sem alteração.${NC}"
-        exit 0
+        echo -e "${YELLOW}⚠️  Arquivos .env já existem com configurações personalizadas.${NC}"
+        read -p "Manter configurações existentes? [Y/n] (n=recirar tudo): " KEEP_CONFIG
+        if [ -z "$KEEP_CONFIG" ] || [ "$KEEP_CONFIG" = "Y" ] || [ "$KEEP_CONFIG" = "y" ]; then
+            echo -e "${GREEN}✅ Mantendo configurações existentes.${NC}"
+            exit 0
+        fi
+        echo -e "${YELLOW}🔄 Recriando configurações...${NC}"
     fi
 fi
 
