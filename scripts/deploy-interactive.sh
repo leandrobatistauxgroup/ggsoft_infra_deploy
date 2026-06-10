@@ -44,11 +44,11 @@ read -p "🗄️  MySQL - Usuário [ggsoft_user]: " MYSQL_USER
 MYSQL_USER=${MYSQL_USER:-ggsoft_user}
 
 while true; do
-    read -s -p "🗄️  MySQL - Senha (mín 12 chars, Enter=auto-gera 12 chars): " MYSQL_PASSWORD
+    read -s -p "🗄️  MySQL - Senha (mín 12 chars, Enter=auto-gera 32 chars forte): " MYSQL_PASSWORD
     echo ""
     if [ -z "$MYSQL_PASSWORD" ]; then
-        MYSQL_PASSWORD=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 12)
-        echo -e "${BLUE}   Senha auto-gerada: ${MYSQL_PASSWORD}${NC}"
+        MYSQL_PASSWORD=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 32)
+        echo -e "${BLUE}   Senha forte auto-gerada (32 chars): ${MYSQL_PASSWORD}${NC}"
         break
     elif [ ${#MYSQL_PASSWORD} -ge 12 ]; then
         read -s -p "   Confirme a senha: " MYSQL_PASSWORD_CONFIRM
@@ -65,11 +65,11 @@ done
 
 # Redis
 while true; do
-    read -s -p "🔐 Redis - Senha (mín 12 chars, Enter=auto-gera 12 chars): " REDIS_PASSWORD
+    read -s -p "🔐 Redis - Senha (mín 12 chars, Enter=auto-gera 24 chars forte): " REDIS_PASSWORD
     echo ""
     if [ -z "$REDIS_PASSWORD" ]; then
-        REDIS_PASSWORD=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 12)
-        echo -e "${BLUE}   Senha auto-gerada: ${REDIS_PASSWORD}${NC}"
+        REDIS_PASSWORD=$(openssl rand -base64 36 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 24)
+        echo -e "${BLUE}   Senha forte auto-gerada (24 chars): ${REDIS_PASSWORD}${NC}"
         break
     elif [ ${#REDIS_PASSWORD} -ge 12 ]; then
         read -s -p "   Confirme a senha: " REDIS_PASSWORD_CONFIRM
@@ -86,31 +86,31 @@ done
 
 # Wallet-Auth Secret Key
 while true; do
-    read -s -p "🔑 Wallet-Auth - SECRET_KEY HMAC (mín 12 chars, Enter=auto-gera 12 chars): " WALLET_SECRET
+    read -s -p "🔑 Wallet-Auth - SECRET_KEY HMAC (mín 32 chars, Enter=auto-gera 64 chars): " WALLET_SECRET
     echo ""
     if [ -z "$WALLET_SECRET" ]; then
-        WALLET_SECRET=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 12)
-        echo -e "${BLUE}   Chave auto-gerada: ${WALLET_SECRET}${NC}"
+        WALLET_SECRET=$(openssl rand -base64 64 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 64)
+        echo -e "${BLUE}   Chave forte auto-gerada (64 chars): ${WALLET_SECRET}${NC}"
         break
-    elif [ ${#WALLET_SECRET} -ge 12 ]; then
+    elif [ ${#WALLET_SECRET} -ge 32 ]; then
         break
     else
-        echo -e "${YELLOW}   Chave deve ter no mínimo 12 caracteres.${NC}"
+        echo -e "${YELLOW}   Chave deve ter no mínimo 32 caracteres.${NC}"
     fi
 done
 
 # History API Secret
 while true; do
-    read -s -p "🔑 History - API_SECRET_KEY (mín 12 chars, Enter=auto-gera 12 chars): " HISTORY_SECRET
+    read -s -p "🔑 History - API_SECRET_KEY (mín 24 chars, Enter=auto-gera 48 chars): " HISTORY_SECRET
     echo ""
     if [ -z "$HISTORY_SECRET" ]; then
-        HISTORY_SECRET=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 12)
-        echo -e "${BLUE}   Chave auto-gerada: ${HISTORY_SECRET}${NC}"
+        HISTORY_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 48)
+        echo -e "${BLUE}   Chave forte auto-gerada (48 chars): ${HISTORY_SECRET}${NC}"
         break
-    elif [ ${#HISTORY_SECRET} -ge 12 ]; then
+    elif [ ${#HISTORY_SECRET} -ge 24 ]; then
         break
     else
-        echo -e "${YELLOW}   Chave deve ter no mínimo 12 caracteres.${NC}"
+        echo -e "${YELLOW}   Chave deve ter no mínimo 24 caracteres.${NC}"
     fi
 done
 
