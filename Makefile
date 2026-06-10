@@ -15,6 +15,10 @@
 # Diretórios
 ENVS_DIR := ./envs
 
+# WORKSPACE_DIR: pasta pai do _deploy (onde ficam todos os repos)
+WORKSPACE_DIR ?= $(shell cd .. && pwd)
+export WORKSPACE_DIR
+
 # Cores para output
 GREEN := '\033[0;32m'
 YELLOW := '\033[0;33m'
