@@ -310,24 +310,21 @@ if [ $ENV_EXISTS -eq 1 ]; then
     echo "  MySQL User: $MYSQL_USER"
     echo ""
     
-    read -p "Usar configurações existentes? [Y/n]: " USE_EXISTING
-    USE_EXISTING=${USE_EXISTING:-Y}
+    echo -e "${GREEN}✅ Usando configurações existentes automaticamente...${NC}"
     
-    if [[ "$USE_EXISTING" =~ ^[Yy]$ ]]; then
-        echo ""
-        echo -e "${BLUE}=== Pulando configuração, usando .env existentes ===${NC}"
-        echo ""
-        
-        # Sincroniza e inicia direto
-        echo -e "${BLUE}Sincronizando .env para projetos...${NC}"
-        ./scripts/sync-envs.sh
-        
-        echo ""
-        echo -e "${BLUE}Iniciando serviços...${NC}"
-        make start
-        
-        exit 0
-    fi
+    echo ""
+    echo -e "${BLUE}=== Pulando configuração, usando .env existentes ===${NC}"
+    echo ""
+    
+    # Sincroniza e inicia direto
+    echo -e "${BLUE}Sincronizando .env para projetos...${NC}"
+    ./scripts/sync-envs.sh
+    
+    echo ""
+    echo -e "${BLUE}Iniciando serviços...${NC}"
+    make start
+    
+    exit 0
 fi
 
 # Se chegou aqui, faz deploy interativo normal
