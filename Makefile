@@ -39,7 +39,13 @@ help: ## Mostra esta ajuda
 deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	@echo "$(GREEN)=== Deploy GGSoft Completo ===$(NC)"
 	@echo "$(BLUE)1. Atualizando repositório de deploy...$(NC)"
-	@git pull 2>/dev/null || echo "$(YELLOW)⚠️ Não foi possível atualizar _deploy (sem git ou sem remote)$(NC)"
+	@MAKEFILE_HASH_BEFORE=$$(md5sum $(MAKEFILE_LIST) 2>/dev/null | md5sum | cut -d' ' -f1); \
+	git pull 2>/dev/null || echo "$(YELLOW)⚠️ Não foi possível atualizar _deploy (sem git ou sem remote)$(NC)"; \
+	MAKEFILE_HASH_AFTER=$$(md5sum $(MAKEFILE_LIST) 2>/dev/null | md5sum | cut -d' ' -f1); \
+	if [ "$$MAKEFILE_HASH_BEFORE" != "$$MAKEFILE_HASH_AFTER" ]; then \
+		echo "$(YELLOW)🔄 Makefile atualizado! Recarregando...$(NC)"; \
+		exec $(MAKE) deploy; \
+	fi
 	@echo "$(BLUE)2. Verificando SERVER_IP...$(NC)"
 	@CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
 	if [ -z "$$CURRENT_IP" ] || [ "$$CURRENT_IP" = "localhost" ] || [ "$$CURRENT_IP" = "$${SERVER_IP:-localhost}" ]; then \
