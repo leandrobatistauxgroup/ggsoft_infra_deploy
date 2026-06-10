@@ -41,7 +41,9 @@ if [ -f "$ENVS_DIR/mysql.env" ]; then
             echo -e "${GREEN}✅ Flag -y: Mantendo configurações existentes.${NC}"
             exit 0
         elif [ "$AUTO_NO" = true ]; then
-            echo -e "${YELLOW}🔄 Flag -n: Recriando configurações com padrões...${NC}"
+            echo -e "${YELLOW}🔄 Flag -n: FORÇANDO recriação dos .env...${NC}"
+            echo -e "${YELLOW}🗑️  Apagando arquivos .env antigos...${NC}"
+            rm -f $ENVS_DIR/*.env
             KEEP_CONFIG="n"
         else
             echo -e "${YELLOW}⚠️  Arquivos .env já existem com configurações personalizadas.${NC}"
