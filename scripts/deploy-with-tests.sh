@@ -11,16 +11,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 ENVS_DIR="${ENVS_DIR:-$SCRIPT_DIR/../envs}"
 
-# Clona repos ausentes automaticamente
-REQUIRED_REPOS="ggsoft_wallet-auth ggsoft_history ggsoft_math_3x3 ggsoft_rgs_3x3 ggsoft_system-control ggsoft_infra_mysql ggsoft_infra_redis ggsoft_infra_nginx ggsoft_game_slot3x3"
-MISSING=0
-for repo in $REQUIRED_REPOS; do
-    [ ! -d "$WORKSPACE_DIR/$repo" ] && MISSING=1 && break
-done
-if [ $MISSING -eq 1 ]; then
-    echo -e "\033[0;33m⚠  Repositórios ausentes — executando clone automático...\033[0m"
-    "$SCRIPT_DIR/setup-repos.sh"
-fi
+# Atualiza todos os repositórios (clone se ausente, pull se existente)
+echo -e "\033[0;34m🔄 Atualizando repositórios...\033[0m"
+"$SCRIPT_DIR/setup-repos.sh"
 
 # Verificações obrigatórias antes do deploy
 PREFLIGHT_FAILED=0
