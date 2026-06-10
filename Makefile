@@ -36,15 +36,17 @@ help: ## Mostra esta ajuda
 	@echo "GGSoft Platform - Comandos disponíveis:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
 
-deploy: ## Deploy completo - testes + envs + sync + start (padrão)
+deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	@echo "$(GREEN)=== Deploy GGSoft Completo ===$(NC)"
+	@echo "$(BLUE)1. Atualizando repositório de deploy...$(NC)"
+	@git pull 2>/dev/null || echo "$(YELLOW)⚠️ Não foi possível atualizar _deploy (sem git ou sem remote)$(NC)"
 	@./scripts/deploy-with-tests.sh
 	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
 	@./scripts/sync-envs.sh
 	@echo "$(GREEN)=== Iniciando todos os serviços ===${NC}"
 	@make start
 
-deploy-quick: ## Deploy rápido sem testes - envs + sync + start
+deploy-quick: ## Deploy rápido sem testes - atualiza _deploy + envs + sync + start
 	@echo "$(YELLOW)=== Deploy GGSoft SEM testes ===${NC}"
 	@echo "$(RED)⚠️  AVISO: Pulando testes de qualidade!${NC}"
 	@./scripts/deploy-interactive.sh
