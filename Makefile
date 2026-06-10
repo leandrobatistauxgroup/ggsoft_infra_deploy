@@ -44,7 +44,7 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	MAKEFILE_HASH_AFTER=$$(md5sum $(MAKEFILE_LIST) 2>/dev/null | md5sum | cut -d' ' -f1); \
 	if [ "$$MAKEFILE_HASH_BEFORE" != "$$MAKEFILE_HASH_AFTER" ]; then \
 		echo "$(YELLOW)🔄 Makefile atualizado! Recarregando...$(NC)"; \
-		exec $(MAKE) deploy; \
+		exec $(MAKE) deploy FLAGS="$(FLAGS)"; \
 	fi
 	@echo "$(BLUE)2. Verificando SERVER_IP...$(NC)"
 	@CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
