@@ -63,8 +63,15 @@ if ! docker compose up -d mysql-test 2>&1 | tee -a "$TEST_OUTPUT"; then
     TEST_FAILED=1
 fi
 
-# Aguarda MySQL ficar saudável
-sleep 5
+# Aguarda MySQL estar pronto para aceitar conexões
+echo -e "${YELLOW}Aguardando MySQL de teste aceitar conexões...${NC}"
+for i in $(seq 1 20); do
+    if docker compose exec -T mysql-test mysqladmin ping -h localhost -uroot -proot_test --silent 2>/dev/null; then
+        echo -e "   ${GREEN}✓ MySQL pronto${NC}"
+        break
+    fi
+    sleep 3
+done
 
 # Executa testes wallet-auth
 echo -e "${YELLOW}Running: docker compose run --rm wallet-auth-tests${NC}" | tee -a "$TEST_OUTPUT"
@@ -100,11 +107,24 @@ echo ""
 echo -e "${BLUE}=== FASE 2/4: Testes de Integração End-to-End ===${NC}"
 echo ""
 
+# Limpa todos os containers que possam conflitar com as portas antes de subir integração
+echo -e "${YELLOW}Liberando portas para testes de integração...${NC}"
+docker compose down 2>/dev/null || true
+docker compose --profile test down 2>/dev/null || true
+for port in 53306 8888 8890 43317 8001 2555; do
+    cname=$(docker ps --filter "publish=$port" --format '{{.Names}}' 2>/dev/null | head -1)
+    if [ -n "$cname" ]; then
+        echo -e "   ${YELLOW}⚠ Parando $cname (porta $port)${NC}"
+        docker stop "$cname" 2>/dev/null || true
+        docker rm "$cname" 2>/dev/null || true
+    fi
+done
+echo -e "   ${GREEN}✓ Portas liberadas${NC}"
+
 echo -e "${YELLOW}🧪 Testando integração de serviços...${NC}"
 echo -e "${YELLOW}Running: docker compose --profile integration-test run --rm integration-tests${NC}" | tee -a "$TEST_OUTPUT"
 
 # Os serviços são subidos automaticamente pelo depends_on do integration-tests
-# Aguarda um momento para garantir que o Docker iniciou os containers
 sleep 5
 
 # Executa testes de integração
