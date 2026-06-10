@@ -188,29 +188,15 @@ init-build: ## Garante que .build é arquivo (não pasta) - necessário para RGS
 		echo "   ✓ .build OK"; \
 	fi
 
-start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend)
-	@echo "$(GREEN)=== Iniciando plataforma GGSoft (4 fases) ===$(NC)"
+start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend) - SEMPRE rebuilda
+	@echo "$(GREEN)=== Iniciando plataforma GGSoft (4 fases) - Rebuild completo ===$(NC)"
 	@make init-build
-	@PORTS="53306 8888 8890 43317 8001 2555"; \
-	CONFLITOS=""; \
-	for port in $$PORTS; do \
-		cname=$$(docker ps --filter "publish=$$port" --format '{{.Names}}' 2>/dev/null | head -1); \
-		if [ -n "$$cname" ]; then \
-			CONFLITOS="$$CONFLITOS\n   • $$cname (porta $$port)"; \
-		fi; \
-	done; \
-	if [ -n "$$CONFLITOS" ]; then \
-		echo "$(YELLOW)⚠️  Containers usando portas da plataforma:$(NC)"; \
-		printf "$$CONFLITOS\n"; \
-		echo "$(BLUE)Derrubando containers automaticamente...$(NC)"; \
-		for port in $$PORTS; do \
-			cname=$$(docker ps --filter "publish=$$port" --format '{{.Names}}' 2>/dev/null | head -1); \
-			[ -n "$$cname" ] && docker stop "$$cname" && docker rm "$$cname" 2>/dev/null || true; \
-		done; \
-		docker compose down 2>/dev/null || true; \
-		docker compose --profile test down 2>/dev/null || true; \
-		docker compose --profile integration-test down 2>/dev/null || true; \
-	fi
+	@echo "$(BLUE)Fase 0/4: Derrubando containers existentes para rebuild...$(NC)"
+	@docker ps -q --filter "name=ggsoft" | xargs -r docker stop 2>/dev/null || true
+	@docker ps -aq --filter "name=ggsoft" | xargs -r docker rm -f 2>/dev/null || true
+	@docker compose down 2>/dev/null || true
+	@docker compose --profile test down 2>/dev/null || true
+	@docker compose --profile integration-test down 2>/dev/null || true
 	@echo "$(BLUE)Criando rede Docker rede-ggsoft...$(NC)"
 	@docker network create rede-ggsoft 2>/dev/null || echo "   Rede já existe"
 	@echo "$(BLUE)Fase 1/4: Infraestrutura (mysql, redis)...$(NC)"
@@ -218,9 +204,9 @@ start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend
 	@echo "$(BLUE)Aguardando healthcheck da infra...$(NC)"
 	@sleep 5
 	@echo "$(BLUE)Fase 2/4: Build das aplicações...$(NC)"
-	@docker compose build $(APPS_SERVICES)
-	@echo "$(BLUE)Fase 3/4: Subindo aplicações...$(NC)"
-	@docker compose up -d $(APPS_SERVICES)
+	@docker compose build --no-cache $(APPS_SERVICES)
+	@echo "$(BLUE)Fase 3/4: Subindo aplicações (force recreate)...$(NC)"
+	@docker compose up -d --force-recreate $(APPS_SERVICES)
 	@echo "$(BLUE)Aguardando healthcheck das aplicações...$(NC)"
 	@sleep 10
 	@echo "$(BLUE)Fase 4/4: Game Server (RGS)...$(NC)"
