@@ -47,13 +47,14 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 		exec $(MAKE) $(MAKECMDGOALS) FLAGS="$(FLAGS)"; \
 	fi
 	@echo "$(BLUE)2. Verificando SERVER_IP...$(NC)"
-	@CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
+	@export SERVER_IP_DETECTED=""; \
+	CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
 	if [ -z "$$CURRENT_IP" ] || [ "$$CURRENT_IP" = "localhost" ] || [ "$$CURRENT_IP" = "$${SERVER_IP:-localhost}" ]; then \
 		if [ "$(FLAGS)" = "-n" ]; then \
 			DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' || echo ""); \
 			if [ -n "$$DETECTED_IP" ]; then \
 				echo "$(GREEN)✓ Modo -n: IP detectado automaticamente: $$DETECTED_IP$(NC)"; \
-				sed -i "s/^SERVER_IP=.*/SERVER_IP=$$DETECTED_IP/" $(ENVS_DIR)/system-control.env; \
+				export SERVER_IP_DETECTED="$$DETECTED_IP"; \
 			else \
 				echo "$(RED)❌ Não foi possível detectar IP automaticamente$(NC)"; \
 				exit 1; \
@@ -62,7 +63,7 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 			HOSTNAME=$$(hostname | tr '[:upper:]' '[:lower:]'); \
 			if echo "$$HOSTNAME" | grep -q "local"; then \
 				echo "$(GREEN)✓ Hostname '$$HOSTNAME' contém 'local' — usando SERVER_IP=localhost$(NC)"; \
-				sed -i "s/^SERVER_IP=.*/SERVER_IP=localhost/" $(ENVS_DIR)/system-control.env; \
+				export SERVER_IP_DETECTED="localhost"; \
 			else \
 				echo "$(YELLOW)⚠️  SERVER_IP não configurado$(NC)"; \
 				echo "$(YELLOW)   Execute: make set-server-ip$(NC)"; \
@@ -71,9 +72,14 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 		fi; \
 	else \
 		echo "$(GREEN)✓ SERVER_IP configurado: $$CURRENT_IP$(NC)"; \
+		export SERVER_IP_DETECTED="$$CURRENT_IP"; \
+	fi; \
+	echo "$(BLUE)3. Configuração interativa (senhas, usuários)...$(NC)"; \
+	if [ -n "$$SERVER_IP_DETECTED" ]; then \
+		SERVER_IP="$$SERVER_IP_DETECTED" ./scripts/deploy-interactive.sh $(FLAGS) || true; \
+	else \
+		./scripts/deploy-interactive.sh $(FLAGS) || true; \
 	fi
-	@echo "$(BLUE)3. Configuração interativa (senhas, usuários)...$(NC)"
-	@./scripts/deploy-interactive.sh $(FLAGS) || true
 	@./scripts/deploy-with-tests.sh
 	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
 	@./scripts/sync-envs.sh

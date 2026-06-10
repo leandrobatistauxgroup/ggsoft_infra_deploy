@@ -379,6 +379,10 @@ cat > "$ENVS_DIR/system-control.env" << EOF
 # Path ABSOLUTO do workspace no host
 WORKSPACE_DIR=$(cd "$(dirname "$0")/../.." && pwd)
 
+# IP do servidor para URLs externas (detectado automaticamente ou configurado)
+# Pode vir da variavel de ambiente SERVER_IP (passada pelo Makefile)
+SERVER_IP=${SERVER_IP:-${SERVER_IP:-localhost}}
+
 # Porta do painel (host bind em 127.0.0.1)
 PANEL_PORT=${PANEL_PORT}
 
