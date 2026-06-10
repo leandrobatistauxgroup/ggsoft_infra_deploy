@@ -22,6 +22,24 @@ if [ $MISSING -eq 1 ]; then
     "$SCRIPT_DIR/setup-repos.sh"
 fi
 
+# Verificações obrigatórias antes do deploy
+PREFLIGHT_FAILED=0
+
+if [ ! -f "$WORKSPACE_DIR/ggsoft_wallet-auth/pem/private.pem" ]; then
+    echo -e "\033[0;31m❌ ERRO: arquivo pem/private.pem não encontrado em ggsoft_wallet-auth/\033[0m"
+    echo -e "\033[0;33m   O wallet-auth precisa de uma chave privada RSA para funcionar.\033[0m"
+    echo -e "\033[0;33m   Copie o arquivo para: $WORKSPACE_DIR/ggsoft_wallet-auth/pem/private.pem\033[0m"
+    echo -e "\033[0;33m   Exemplo via SCP:\033[0m"
+    echo -e "   scp -i ~/sua-chave.pem ./pem/private.pem ubuntu@<servidor>:$WORKSPACE_DIR/ggsoft_wallet-auth/pem/private.pem"
+    PREFLIGHT_FAILED=1
+fi
+
+if [ $PREFLIGHT_FAILED -eq 1 ]; then
+    echo ""
+    echo -e "\033[0;31m❌ Deploy abortado — corrija os erros acima antes de prosseguir.\033[0m"
+    exit 1
+fi
+
 # Sincroniza .env para todos os repos antes do build
 "$SCRIPT_DIR/sync-envs.sh"
 
