@@ -103,14 +103,9 @@ echo ""
 echo -e "${YELLOW}🧪 Testando integração de serviços...${NC}"
 echo -e "${YELLOW}Running: docker compose --profile integration-test run --rm integration-tests${NC}" | tee -a "$TEST_OUTPUT"
 
-# Sobe os serviços de produção
-if ! docker compose up -d mysql wallet-auth history rgs-fruit nginx 2>&1 | tee -a "$TEST_OUTPUT"; then
-    echo -e "${RED}❌ Falha ao subir serviços — verifique conflito de portas${NC}"
-    TEST_FAILED=1
-fi
-
-# Aguarda serviços ficarem healthy
-sleep 10
+# Os serviços são subidos automaticamente pelo depends_on do integration-tests
+# Aguarda um momento para garantir que o Docker iniciou os containers
+sleep 5
 
 # Executa testes de integração
 if ! docker compose --profile integration-test run --rm integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
