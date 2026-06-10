@@ -33,7 +33,8 @@ echo "║           GGSoft Platform - Deploy Interativo                 ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
-# Se .env já existir com senha personalizada, pergunta se quer manter ou recriar
+# Se .env já existir com senha personalizada, mantem automaticamente (sem perguntar)
+# so recria se usar flag -n explicitamente
 if [ -f "$ENVS_DIR/mysql.env" ]; then
     CURRENT_PASSWORD=$(grep "^MYSQL_PASSWORD=" "$ENVS_DIR/mysql.env" 2>/dev/null | cut -d'=' -f2 | tr -d "'\"" || echo "")
     if [ -n "$CURRENT_PASSWORD" ] && [ "$CURRENT_PASSWORD" != "ggsoft_password_change_me" ]; then
@@ -44,31 +45,14 @@ if [ -f "$ENVS_DIR/mysql.env" ]; then
             echo -e "${YELLOW}🔄 Flag -n: FORÇANDO recriação dos .env...${NC}"
             echo -e "${YELLOW}🗑️  Apagando arquivos .env antigos...${NC}"
             rm -f $ENVS_DIR/*.env
-            KEEP_CONFIG="n"
-        else
-            echo -e "${YELLOW}⚠️  Arquivos .env já existem com configurações personalizadas.${NC}"
-            read -p "Manter configurações existentes? [Y/n] (n=recirar tudo): " KEEP_CONFIG
-        fi
-        if [ -z "$KEEP_CONFIG" ] || [ "$KEEP_CONFIG" = "Y" ] || [ "$KEEP_CONFIG" = "y" ]; then
-            echo -e "${GREEN}✅ Mantendo configurações existentes.${NC}"
-            exit 0
-        fi
-        echo -e "${YELLOW}🔄 Recriando configurações...${NC}"
-        # Pergunta se quer limpar volumes (necessário quando muda senhas)
-        if [ "$AUTO_NO" = true ]; then
             echo -e "${YELLOW}⚠️  Flag -n: Limpando containers e volumes do GGSoft...${NC}"
             docker compose down 2>/dev/null || true
             docker volume rm ggsoft_platform_mysql_data 2>/dev/null || true
             docker volume rm ggsoft_platform_redis_data 2>/dev/null || true
         else
-            echo -e "${YELLOW}⚠️  Ao recriar envs, a senha do MySQL pode mudar.${NC}"
-            read -p "Limpar volumes Docker (dados do MySQL)? [y/N]: " CLEAN_VOLUMES
-            if [ "$CLEAN_VOLUMES" = "y" ] || [ "$CLEAN_VOLUMES" = "Y" ]; then
-                echo -e "${YELLOW}🗑️  Limpando containers e volumes do GGSoft...${NC}"
-                docker compose down 2>/dev/null || true
-                docker volume rm ggsoft_platform_mysql_data 2>/dev/null || true
-                docker volume rm ggsoft_platform_redis_data 2>/dev/null || true
-            fi
+            # Deploy padrao: mantem automaticamente sem perguntar
+            echo -e "${GREEN}✅ Configurações existentes encontradas — mantendo (use -n para recriar).${NC}"
+            exit 0
         fi
     fi
 fi
