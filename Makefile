@@ -62,7 +62,7 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 		echo "$(GREEN)✓ SERVER_IP configurado: $$CURRENT_IP$(NC)"; \
 	fi
 	@echo "$(BLUE)3. Configuração interativa (senhas, usuários)...$(NC)"
-	@./scripts/deploy-interactive.sh || true
+	@./scripts/deploy-interactive.sh $(DEPLOY_FLAGS) || true
 	@./scripts/deploy-with-tests.sh
 	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
 	@./scripts/sync-envs.sh

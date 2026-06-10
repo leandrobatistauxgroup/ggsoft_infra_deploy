@@ -2,9 +2,23 @@
 # =============================================================================
 # Script Interativo de Deploy GGSoft
 # Pergunta configurações ao usuário e gera os arquivos .env
+# Uso: ./deploy-interactive.sh [-y] [-n]
+#   -y  Auto-yes: mantem configs existentes, usa defaults para novos
+#   -n  Auto-no/default: recria tudo com valores padrao (enter vazio)
 # =============================================================================
 
 set -e
+
+# Parse flags
+AUTO_YES=false
+AUTO_NO=false
+while getopts "yn" opt; do
+  case $opt in
+    y) AUTO_YES=true ;;
+    n) AUTO_NO=true ;;
+    *) echo "Uso: $0 [-y] [-n]"; exit 1 ;;
+  esac
+done
 
 ENVS_DIR="${ENVS_DIR:-./envs}"
 GREEN='\033[0;32m'
@@ -23,8 +37,16 @@ echo -e "${NC}"
 if [ -f "$ENVS_DIR/mysql.env" ]; then
     CURRENT_PASSWORD=$(grep "^MYSQL_PASSWORD=" "$ENVS_DIR/mysql.env" 2>/dev/null | cut -d'=' -f2 | tr -d "'\"" || echo "")
     if [ -n "$CURRENT_PASSWORD" ] && [ "$CURRENT_PASSWORD" != "ggsoft_password_change_me" ]; then
-        echo -e "${YELLOW}⚠️  Arquivos .env já existem com configurações personalizadas.${NC}"
-        read -p "Manter configurações existentes? [Y/n] (n=recirar tudo): " KEEP_CONFIG
+        if [ "$AUTO_YES" = true ]; then
+            echo -e "${GREEN}✅ Flag -y: Mantendo configurações existentes.${NC}"
+            exit 0
+        elif [ "$AUTO_NO" = true ]; then
+            echo -e "${YELLOW}🔄 Flag -n: Recriando configurações com padrões...${NC}"
+            KEEP_CONFIG="n"
+        else
+            echo -e "${YELLOW}⚠️  Arquivos .env já existem com configurações personalizadas.${NC}"
+            read -p "Manter configurações existentes? [Y/n] (n=recirar tudo): " KEEP_CONFIG
+        fi
         if [ -z "$KEEP_CONFIG" ] || [ "$KEEP_CONFIG" = "Y" ] || [ "$KEEP_CONFIG" = "y" ]; then
             echo -e "${GREEN}✅ Mantendo configurações existentes.${NC}"
             exit 0
@@ -33,7 +55,10 @@ if [ -f "$ENVS_DIR/mysql.env" ]; then
     fi
 fi
 
-echo -e "${CYAN}Configure os parâmetros do deploy (Enter para aceitar padrão):${NC}"
+if [ "$AUTO_NO" = true ]; then
+    echo -e "${CYAN}⚡ Modo automático (-n): usando valores padrão...${NC}"
+fi
+
 echo ""
 
 # =============================================================================
@@ -41,109 +66,157 @@ echo ""
 # =============================================================================
 
 # Localização
-read -p "🌍 Localização [GGSOFT]: " LOCATION
-LOCATION=${LOCATION:-GGSOFT}
+if [ "$AUTO_NO" = true ]; then
+    LOCATION="GGSOFT"
+    echo "🌍 Localização: $LOCATION"
+else
+    read -p "🌍 Localização [GGSOFT]: " LOCATION
+    LOCATION=${LOCATION:-GGSOFT}
+fi
 
 # MySQL
-read -p "🗄️  MySQL - Usuário [ggsoft_user]: " MYSQL_USER
-MYSQL_USER=${MYSQL_USER:-ggsoft_user}
+if [ "$AUTO_NO" = true ]; then
+    MYSQL_USER="ggsoft_user"
+    echo "🗄️  MySQL - Usuário: $MYSQL_USER"
+else
+    read -p "🗄️  MySQL - Usuário [ggsoft_user]: " MYSQL_USER
+    MYSQL_USER=${MYSQL_USER:-ggsoft_user}
+fi
 
-while true; do
-    read -s -p "🗄️  MySQL - Senha (mín 12 chars, Enter=auto-gera 32 chars forte): " MYSQL_PASSWORD
-    echo ""
-    if [ -z "$MYSQL_PASSWORD" ]; then
-        MYSQL_PASSWORD=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 32)
-        echo -e "${BLUE}   Senha forte auto-gerada (32 chars): ${MYSQL_PASSWORD}${NC}"
-        break
-    elif [ ${#MYSQL_PASSWORD} -ge 12 ]; then
-        read -s -p "   Confirme a senha: " MYSQL_PASSWORD_CONFIRM
+if [ "$AUTO_NO" = true ]; then
+    MYSQL_PASSWORD=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 32)
+    echo "🗄️  MySQL - Senha: (auto-gerada 32 chars)"
+else
+    while true; do
+        read -s -p "🗄️  MySQL - Senha (mín 12 chars, Enter=auto-gera 32 chars forte): " MYSQL_PASSWORD
         echo ""
-        if [ "$MYSQL_PASSWORD" = "$MYSQL_PASSWORD_CONFIRM" ]; then
+        if [ -z "$MYSQL_PASSWORD" ]; then
+            MYSQL_PASSWORD=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 32)
+            echo -e "${BLUE}   Senha forte auto-gerada (32 chars): ${MYSQL_PASSWORD}${NC}"
             break
+        elif [ ${#MYSQL_PASSWORD} -ge 12 ]; then
+            read -s -p "   Confirme a senha: " MYSQL_PASSWORD_CONFIRM
+            echo ""
+            if [ "$MYSQL_PASSWORD" = "$MYSQL_PASSWORD_CONFIRM" ]; then
+                break
+            else
+                echo -e "${YELLOW}   Senhas não conferem. Tente novamente.${NC}"
+            fi
         else
-            echo -e "${YELLOW}   Senhas não conferem. Tente novamente.${NC}"
+            echo -e "${YELLOW}   Senha deve ter no mínimo 12 caracteres.${NC}"
         fi
-    else
-        echo -e "${YELLOW}   Senha deve ter no mínimo 12 caracteres.${NC}"
-    fi
-done
+    done
+fi
 
 # Redis
-while true; do
-    read -s -p "🔐 Redis - Senha (mín 12 chars, Enter=auto-gera 24 chars forte): " REDIS_PASSWORD
-    echo ""
-    if [ -z "$REDIS_PASSWORD" ]; then
-        REDIS_PASSWORD=$(openssl rand -base64 36 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 24)
-        echo -e "${BLUE}   Senha forte auto-gerada (24 chars): ${REDIS_PASSWORD}${NC}"
-        break
-    elif [ ${#REDIS_PASSWORD} -ge 12 ]; then
-        read -s -p "   Confirme a senha: " REDIS_PASSWORD_CONFIRM
+if [ "$AUTO_NO" = true ]; then
+    REDIS_PASSWORD=$(openssl rand -base64 36 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 24)
+    echo "🔐 Redis - Senha: (auto-gerada 24 chars)"
+else
+    while true; do
+        read -s -p "🔐 Redis - Senha (mín 12 chars, Enter=auto-gera 24 chars forte): " REDIS_PASSWORD
         echo ""
-        if [ "$REDIS_PASSWORD" = "$REDIS_PASSWORD_CONFIRM" ]; then
+        if [ -z "$REDIS_PASSWORD" ]; then
+            REDIS_PASSWORD=$(openssl rand -base64 36 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 24)
+            echo -e "${BLUE}   Senha forte auto-gerada (24 chars): ${REDIS_PASSWORD}${NC}"
             break
+        elif [ ${#REDIS_PASSWORD} -ge 12 ]; then
+            read -s -p "   Confirme a senha: " REDIS_PASSWORD_CONFIRM
+            echo ""
+            if [ "$REDIS_PASSWORD" = "$REDIS_PASSWORD_CONFIRM" ]; then
+                break
+            else
+                echo -e "${YELLOW}   Senhas não conferem. Tente novamente.${NC}"
+            fi
         else
-            echo -e "${YELLOW}   Senhas não conferem. Tente novamente.${NC}"
+            echo -e "${YELLOW}   Senha deve ter no mínimo 12 caracteres.${NC}"
         fi
-    else
-        echo -e "${YELLOW}   Senha deve ter no mínimo 12 caracteres.${NC}"
-    fi
-done
+    done
+fi
 
 # Wallet-Auth Secret Key
-while true; do
-    read -s -p "🔑 Wallet-Auth - SECRET_KEY HMAC (mín 32 chars, Enter=auto-gera 64 chars): " WALLET_SECRET
-    echo ""
-    if [ -z "$WALLET_SECRET" ]; then
-        WALLET_SECRET=$(openssl rand -base64 64 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 64)
-        echo -e "${BLUE}   Chave forte auto-gerada (64 chars): ${WALLET_SECRET}${NC}"
-        break
-    elif [ ${#WALLET_SECRET} -ge 32 ]; then
-        break
-    else
-        echo -e "${YELLOW}   Chave deve ter no mínimo 32 caracteres.${NC}"
-    fi
-done
+if [ "$AUTO_NO" = true ]; then
+    WALLET_SECRET=$(openssl rand -base64 64 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 64)
+    echo "🔑 Wallet-Auth - SECRET_KEY: (auto-gerada 64 chars)"
+else
+    while true; do
+        read -s -p "🔑 Wallet-Auth - SECRET_KEY HMAC (mín 32 chars, Enter=auto-gera 64 chars): " WALLET_SECRET
+        echo ""
+        if [ -z "$WALLET_SECRET" ]; then
+            WALLET_SECRET=$(openssl rand -base64 64 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 64)
+            echo -e "${BLUE}   Chave forte auto-gerada (64 chars): ${WALLET_SECRET}${NC}"
+            break
+        elif [ ${#WALLET_SECRET} -ge 32 ]; then
+            break
+        else
+            echo -e "${YELLOW}   Chave deve ter no mínimo 32 caracteres.${NC}"
+        fi
+    done
+fi
 
 # History API Secret
-while true; do
-    read -s -p "🔑 History - API_SECRET_KEY (mín 24 chars, Enter=auto-gera 48 chars): " HISTORY_SECRET
-    echo ""
-    if [ -z "$HISTORY_SECRET" ]; then
-        HISTORY_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 48)
-        echo -e "${BLUE}   Chave forte auto-gerada (48 chars): ${HISTORY_SECRET}${NC}"
-        break
-    elif [ ${#HISTORY_SECRET} -ge 24 ]; then
-        break
-    else
-        echo -e "${YELLOW}   Chave deve ter no mínimo 24 caracteres.${NC}"
-    fi
-done
+if [ "$AUTO_NO" = true ]; then
+    HISTORY_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 48)
+    echo "🔑 History - API_SECRET_KEY: (auto-gerada 48 chars)"
+else
+    while true; do
+        read -s -p "🔑 History - API_SECRET_KEY (mín 24 chars, Enter=auto-gera 48 chars): " HISTORY_SECRET
+        echo ""
+        if [ -z "$HISTORY_SECRET" ]; then
+            HISTORY_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 48)
+            echo -e "${BLUE}   Chave forte auto-gerada (48 chars): ${HISTORY_SECRET}${NC}"
+            break
+        elif [ ${#HISTORY_SECRET} -ge 24 ]; then
+            break
+        else
+            echo -e "${YELLOW}   Chave deve ter no mínimo 24 caracteres.${NC}"
+        fi
+    done
+fi
 
 # Tokens de teste (opcional)
-echo ""
-echo -e "${CYAN}Tokens de teste (Enter para padrões):${NC}"
-read -p "🎮 RGS_TOKEN [TK15]: " RGS_TOKEN
-RGS_TOKEN=${RGS_TOKEN:-TK15}
-read -p "🎮 CIRCUIT_TOKEN [TK16]: " CIRCUIT_TOKEN
-CIRCUIT_TOKEN=${CIRCUIT_TOKEN:-TK16}
+if [ "$AUTO_NO" = true ]; then
+    RGS_TOKEN="TK15"
+    CIRCUIT_TOKEN="TK16"
+    echo "🎮 RGS_TOKEN: $RGS_TOKEN"
+    echo "🎮 CIRCUIT_TOKEN: $CIRCUIT_TOKEN"
+else
+    echo ""
+    echo -e "${CYAN}Tokens de teste (Enter para padrões):${NC}"
+    read -p "🎮 RGS_TOKEN [TK15]: " RGS_TOKEN
+    RGS_TOKEN=${RGS_TOKEN:-TK15}
+    read -p "🎮 CIRCUIT_TOKEN [TK16]: " CIRCUIT_TOKEN
+    CIRCUIT_TOKEN=${CIRCUIT_TOKEN:-TK16}
+fi
 
 # Portas (Enter para manter padrões)
-echo ""
-echo -e "${CYAN}Portas (Enter para manter padrões):${NC}"
-read -p "📡 MySQL Host Port [53306]: " MYSQL_PORT
-MYSQL_PORT=${MYSQL_PORT:-53306}
-read -p "📡 Redis Port [36380]: " REDIS_PORT
-REDIS_PORT=${REDIS_PORT:-36380}
-read -p "📡 Wallet-Auth Port [8888]: " WALLET_PORT
-WALLET_PORT=${WALLET_PORT:-8888}
-read -p "📡 History Port [8890]: " HISTORY_PORT
-HISTORY_PORT=${HISTORY_PORT:-8890}
-# RGS Port não perguntado - definido no docker-compose.yml (43317)
-RGS_PORT=43317
-read -p "📡 Panel Port [2555]: " PANEL_PORT
-PANEL_PORT=${PANEL_PORT:-2555}
-read -p "📡 Nginx Port [8001]: " NGINX_PORT
-NGINX_PORT=${NGINX_PORT:-8001}
+if [ "$AUTO_NO" = true ]; then
+    MYSQL_PORT=53306
+    REDIS_PORT=36380
+    WALLET_PORT=8888
+    HISTORY_PORT=8890
+    RGS_PORT=43317
+    PANEL_PORT=2555
+    NGINX_PORT=8001
+    echo "📡 Portas: MySQL=$MYSQL_PORT, Redis=$REDIS_PORT, Wallet=$WALLET_PORT, History=$HISTORY_PORT, Panel=$PANEL_PORT, Nginx=$NGINX_PORT"
+else
+    echo ""
+    echo -e "${CYAN}Portas (Enter para manter padrões):${NC}"
+    read -p "📡 MySQL Host Port [53306]: " MYSQL_PORT
+    MYSQL_PORT=${MYSQL_PORT:-53306}
+    read -p "📡 Redis Port [36380]: " REDIS_PORT
+    REDIS_PORT=${REDIS_PORT:-36380}
+    read -p "📡 Wallet-Auth Port [8888]: " WALLET_PORT
+    WALLET_PORT=${WALLET_PORT:-8888}
+    read -p "📡 History Port [8890]: " HISTORY_PORT
+    HISTORY_PORT=${HISTORY_PORT:-8890}
+    # RGS Port não perguntado - definido no docker-compose.yml (43317)
+    RGS_PORT=43317
+    read -p "📡 Panel Port [2555]: " PANEL_PORT
+    PANEL_PORT=${PANEL_PORT:-2555}
+    read -p "📡 Nginx Port [8001]: " NGINX_PORT
+    NGINX_PORT=${NGINX_PORT:-8001}
+fi
 
 echo ""
 echo -e "${GREEN}✅ Configurações coletadas. Gerando arquivos .env...${NC}"
