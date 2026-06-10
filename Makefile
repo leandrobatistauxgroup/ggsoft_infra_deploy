@@ -91,6 +91,8 @@ start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend
 		CONFIRM=$${CONFIRM:-Y}; \
 		if echo "$$CONFIRM" | grep -qi "^y"; then \
 			docker compose down 2>/dev/null || true; \
+			docker compose --profile test down 2>/dev/null || true; \
+			docker compose --profile integration-test down 2>/dev/null || true; \
 		fi; \
 	fi
 	@echo "$(BLUE)Criando rede Docker rede-ggsoft...$(NC)"

@@ -85,6 +85,8 @@ if [ -n "$RUNNING" ]; then
     if [[ "$CONFIRM_DOWN" =~ ^[Yy]$ ]]; then
         echo -e "${BLUE}Derrubando containers...${NC}"
         docker compose down 2>/dev/null || true
+        docker compose --profile test down 2>/dev/null || true
+        docker compose --profile integration-test down 2>/dev/null || true
     else
         echo -e "${YELLOW}Mantendo containers. Tentando subir em paralelo...${NC}"
     fi
