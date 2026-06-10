@@ -10,7 +10,7 @@
 #   4. Frontend: nginx, system-control
 # =============================================================================
 
-.PHONY: help setup init-build start start-infra start-apps start-rgs stop restart logs status wait-health test clean verify envs
+.PHONY: help setup init-build start start-infra start-apps start-rgs stop restart logs status wait-health test clean verify envs set-server-ip set-server-ip-manual
 
 # Diretórios
 ENVS_DIR := ./envs
@@ -40,6 +40,21 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	@echo "$(GREEN)=== Deploy GGSoft Completo ===$(NC)"
 	@echo "$(BLUE)1. Atualizando repositório de deploy...$(NC)"
 	@git pull 2>/dev/null || echo "$(YELLOW)⚠️ Não foi possível atualizar _deploy (sem git ou sem remote)$(NC)"
+	@echo "$(BLUE)2. Verificando SERVER_IP...$(NC)"
+	@CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
+	if [ -z "$$CURRENT_IP" ] || [ "$$CURRENT_IP" = "localhost" ] || [ "$$CURRENT_IP" = "$${SERVER_IP:-localhost}" ]; then \
+		HOSTNAME=$$(hostname | tr '[:upper:]' '[:lower:]'); \
+		if echo "$$HOSTNAME" | grep -q "local"; then \
+			echo "$(GREEN)✓ Hostname '$$HOSTNAME' contém 'local' — usando SERVER_IP=localhost$(NC)"; \
+			sed -i "s/^SERVER_IP=.*/SERVER_IP=localhost/" $(ENVS_DIR)/system-control.env; \
+		else \
+			echo "$(YELLOW)⚠️  SERVER_IP não configurado$(NC)"; \
+			echo "$(YELLOW)   Execute: make set-server-ip$(NC)"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "$(GREEN)✓ SERVER_IP configurado: $$CURRENT_IP$(NC)"; \
+	fi
 	@./scripts/deploy-with-tests.sh
 	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
 	@./scripts/sync-envs.sh
