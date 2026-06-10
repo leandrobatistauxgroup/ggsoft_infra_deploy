@@ -43,8 +43,8 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	git pull 2>/dev/null || echo "$(YELLOW)⚠️ Não foi possível atualizar _deploy (sem git ou sem remote)$(NC)"; \
 	MAKEFILE_HASH_AFTER=$$(md5sum $(MAKEFILE_LIST) 2>/dev/null | md5sum | cut -d' ' -f1); \
 	if [ "$$MAKEFILE_HASH_BEFORE" != "$$MAKEFILE_HASH_AFTER" ]; then \
-		echo "$(YELLOW)🔄 Makefile atualizado! Recarregando...$(NC)"; \
-		exec $(MAKE) deploy FLAGS="$(FLAGS)"; \
+		echo "$(YELLOW)🔄 Makefile atualizado! Recarregando $(MAKECMDGOALS)...$(NC)"; \
+		exec $(MAKE) $(MAKECMDGOALS) FLAGS="$(FLAGS)"; \
 	fi
 	@echo "$(BLUE)2. Verificando SERVER_IP...$(NC)"
 	@CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
