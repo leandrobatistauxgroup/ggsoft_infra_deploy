@@ -62,6 +62,53 @@ clone: ## Clona todos os repositórios da plataforma como irmãos deste diretór
 	@echo "$(BLUE)=== Clonando repositórios GGSoft ===$(NC)"
 	@./scripts/setup-repos.sh
 
+set-server-ip: ## Detecta ambiente e configura SERVER_IP (local=auto, remoto=pergunta)
+	@echo "$(BLUE)=== Configurando SERVER_IP ===$(NC)"
+	@# Detecta se é ambiente local (tem interface gráfica ou usuário local)
+	@IS_LOCAL="no"; \
+	if [ -n "$${DISPLAY:-}" ] || [ "$$(whoami)" = "$${USER:-}" ] && [ -z "$${SSH_CLIENT:-}" ]; then \
+		IS_LOCAL="yes"; \
+	fi; \
+	if [ "$$IS_LOCAL" = "yes" ]; then \
+		echo "$(GREEN)✓ Ambiente local detectado — usando localhost$(NC)"; \
+		sed -i "s/^SERVER_IP=.*/SERVER_IP=localhost/" $(ENVS_DIR)/system-control.env; \
+		echo "$(GREEN)✓ SERVER_IP=localhost configurado$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠️  Ambiente remoto/SSH detectado$(NC)"; \
+		DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' || echo ""); \
+		if [ -z "$$DETECTED_IP" ]; then \
+			DETECTED_IP=$$(ip route get 1 2>/dev/null | head -1 | sed -n 's/.*src \([0-9.]*\).*/\1/p' || echo ""); \
+		fi; \
+		if [ -z "$$DETECTED_IP" ]; then \
+			DETECTED_IP=$$(ifconfig 2>/dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | head -1 || echo ""); \
+		fi; \
+		if [ -n "$$DETECTED_IP" ]; then \
+			echo "$(BLUE)IP detectado: $$DETECTED_IP$(NC)"; \
+			read -p "Usar este IP? [Y/n] ou digite outro IP/dominio: " CONFIRM; \
+			if [ -z "$$CONFIRM" ] || [ "$$CONFIRM" = "Y" ] || [ "$$CONFIRM" = "y" ]; then \
+				FINAL_IP="$$DETECTED_IP"; \
+			else \
+				FINAL_IP="$$CONFIRM"; \
+			fi; \
+		else \
+			read -p "Digite o IP ou dominio do servidor: " FINAL_IP; \
+		fi; \
+		if [ -n "$$FINAL_IP" ]; then \
+			sed -i "s/^SERVER_IP=.*/SERVER_IP=$$FINAL_IP/" $(ENVS_DIR)/system-control.env; \
+			echo "$(GREEN)✓ SERVER_IP=$$FINAL_IP configurado$(NC)"; \
+		else \
+			echo "$(RED)❌ IP não informado — SERVER_IP permanece inalterado$(NC)"; \
+		fi; \
+	fi
+
+set-server-ip-manual: ## Configura IP manualmente (use: make set-server-ip IP=192.168.1.100)
+	@if [ -z "$(IP)" ]; then \
+		echo "$(RED)❌ Especifique o IP: make set-server-ip IP=192.168.1.100$(NC)"; \
+		exit 1; \
+	fi; \
+	sed -i "s/^SERVER_IP=.*/SERVER_IP=$(IP)/" $(ENVS_DIR)/system-control.env; \
+	echo "$(GREEN)✓ SERVER_IP configurado: $(IP)$(NC)"
+
 setup: ## Setup inicial - cria rede Docker, verifica envs e garante .build
 	@echo "$(GREEN)=== Setup inicial da plataforma GGSoft ===$(NC)"
 	@echo "$(BLUE)1. Criando rede Docker 'rede-ggsoft'...$(NC)"
@@ -75,17 +122,12 @@ setup: ## Setup inicial - cria rede Docker, verifica envs e garante .build
 		fi; \
 	done
 	@echo "$(BLUE)3. Verificando SERVER_IP no system-control.env...$(NC)"
-	@if grep -q "SERVER_IP=localhost" $(ENVS_DIR)/system-control.env 2>/dev/null; then \
-		echo "   $(RED)✗ ERRO: SERVER_IP está como 'localhost'!$(NC)"; \
-		echo "   $(YELLOW)   Edite $(ENVS_DIR)/system-control.env e defina o IP do servidor$(NC)"; \
-		exit 1; \
-	elif grep -q "SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null; then \
-		server_ip=$$(grep "SERVER_IP=" $(ENVS_DIR)/system-control.env | cut -d'=' -f2); \
-		echo "   ✓ SERVER_IP configurado: $$server_ip"; \
+	@CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
+	if [ -z "$$CURRENT_IP" ] || [ "$$CURRENT_IP" = "localhost" ] || [ "$$CURRENT_IP" = "$${SERVER_IP:-localhost}" ]; then \
+		echo "   $(YELLOW)⚠️  SERVER_IP não configurado ou é localhost$(NC)"; \
+		echo "   $(YELLOW)   Execute: make set-server-ip$(NC)"; \
 	else \
-		echo "   $(RED)✗ SERVER_IP não encontrado em system-control.env$(NC)"; \
-		echo "   $(YELLOW)   Adicione SERVER_IP=<ip_do_servidor> no arquivo$(NC)"; \
-		exit 1; \
+		echo "   ✓ SERVER_IP configurado: $$CURRENT_IP"; \
 	fi
 	@make init-build
 	@echo "$(YELLOW)4. IMPORTANTE: Edite os arquivos em $(ENVS_DIR)/ com suas senhas!$(NC)"
