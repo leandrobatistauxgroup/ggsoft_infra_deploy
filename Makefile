@@ -271,11 +271,13 @@ test: ## Executa testes do wallet-auth
 	@sleep 5
 	docker compose run --rm wallet-auth-tests
 
-clean: ## Remove containers, volumes e rede (⚠️ Dados serão perdidos!)
-	@echo "$(RED)=== ATENÇÃO: Isso removerá TODOS os dados! ===$(NC)"
+clean: ## Remove containers, volumes GGSoft e rede (⚠️ Dados serão perdidos!)
+	@echo "$(RED)=== ATENÇÃO: Isso removerá containers e volumes do GGSoft! ===$(NC)"
 	@read -p "Digite 'SIM' para confirmar: " confirm && \
 	if [ "$${confirm}" = "SIM" ]; then \
-		docker compose down -v; \
+		docker compose down; \
+		docker volume rm ggsoft_platform_mysql_data 2>/dev/null || true; \
+		docker volume rm ggsoft_platform_redis_data 2>/dev/null || true; \
 		docker network rm rede-ggsoft 2>/dev/null || true; \
 		echo "$(GREEN)Limpeza concluída$(NC)"; \
 	else \

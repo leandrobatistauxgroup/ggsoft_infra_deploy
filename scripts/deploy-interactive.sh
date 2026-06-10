@@ -56,16 +56,18 @@ if [ -f "$ENVS_DIR/mysql.env" ]; then
         echo -e "${YELLOW}🔄 Recriando configurações...${NC}"
         # Pergunta se quer limpar volumes (necessário quando muda senhas)
         if [ "$AUTO_NO" = true ]; then
-            echo -e "${YELLOW}⚠️  Flag -n: Limpando volumes Docker para nova senha do MySQL...${NC}"
-            docker compose down -v 2>/dev/null || true
+            echo -e "${YELLOW}⚠️  Flag -n: Limpando containers e volumes do GGSoft...${NC}"
+            docker compose down 2>/dev/null || true
             docker volume rm ggsoft_platform_mysql_data 2>/dev/null || true
+            docker volume rm ggsoft_platform_redis_data 2>/dev/null || true
         else
             echo -e "${YELLOW}⚠️  Ao recriar envs, a senha do MySQL pode mudar.${NC}"
             read -p "Limpar volumes Docker (dados do MySQL)? [y/N]: " CLEAN_VOLUMES
             if [ "$CLEAN_VOLUMES" = "y" ] || [ "$CLEAN_VOLUMES" = "Y" ]; then
-                echo -e "${YELLOW}🗑️  Limpando volumes Docker...${NC}"
-                docker compose down -v 2>/dev/null || true
+                echo -e "${YELLOW}🗑️  Limpando containers e volumes do GGSoft...${NC}"
+                docker compose down 2>/dev/null || true
                 docker volume rm ggsoft_platform_mysql_data 2>/dev/null || true
+                docker volume rm ggsoft_platform_redis_data 2>/dev/null || true
             fi
         fi
     fi
