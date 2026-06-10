@@ -27,7 +27,7 @@ REPOS["ggsoft_system-control"]="git@github.com:GGSoftBR/ggsoft_infra_system-cont
 REPOS["ggsoft_infra_mysql"]="git@github.com:GGSoftBR/ggsoft_infra_mysql.git"
 REPOS["ggsoft_infra_redis"]="git@github.com:GGSoftBR/ggsoft_infra_redis.git"
 REPOS["ggsoft_infra_nginx"]="git@github.com:GGSoftBR/ggsoft_infra_nginx.git"
-REPOS["ggsoft_game_slot3x3"]="git@github.com:GGSoftBR/ggsoft_game_slot3x3.git"
+# NOTA: ggsoft_game_slot3x3 não é clonado no deploy - jogo compilado fica em nginx/games/
 
 for folder in "${!REPOS[@]}"; do
     url="${REPOS[$folder]}"
