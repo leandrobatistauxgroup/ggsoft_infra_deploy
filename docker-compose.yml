@@ -208,7 +208,7 @@ services:
     env_file:
       - ./envs/system-control.env
     ports:
-      - "127.0.0.1:2555:2555"
+      - "2555:2555"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${WORKSPACE_DIR:-..}:${WORKSPACE_DIR:-/workspace}
