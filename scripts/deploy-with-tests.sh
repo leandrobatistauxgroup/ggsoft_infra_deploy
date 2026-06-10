@@ -148,7 +148,7 @@ echo ""
 
 if [ $TEST_FAILED -eq 0 ]; then
     # Verificar se há falhas na saída (mesmo com exit code 0, pode ter falhas)
-    if grep -q "FAILED\|ERROR\|failures" "$TEST_OUTPUT" 2>/dev/null; then
+    if grep -qE "^FAILED |^ERROR | [0-9]+ failed| [0-9]+ error" "$TEST_OUTPUT" 2>/dev/null; then
         TEST_FAILED=1
     fi
 fi
