@@ -102,8 +102,8 @@ else
 fi
 
 if [ "$AUTO_NO" = true ]; then
-    MYSQL_PASSWORD=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 32)
-    echo "🗄️  MySQL - Senha: (auto-gerada 32 chars)"
+    MYSQL_PASSWORD="ggsoft_test_2025"
+    echo "🗄️  MySQL - Senha: $MYSQL_PASSWORD (padrão)"
 else
     while true; do
         read -s -p "🗄️  MySQL - Senha (mín 12 chars, Enter=auto-gera 32 chars forte): " MYSQL_PASSWORD
@@ -128,8 +128,8 @@ fi
 
 # Redis
 if [ "$AUTO_NO" = true ]; then
-    REDIS_PASSWORD=$(openssl rand -base64 36 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 24)
-    echo "🔐 Redis - Senha: (auto-gerada 24 chars)"
+    REDIS_PASSWORD="astrolopitecus34y384535sgdjhgdxvc"
+    echo "🔐 Redis - Senha: $REDIS_PASSWORD (padrão)"
 else
     while true; do
         read -s -p "🔐 Redis - Senha (mín 12 chars, Enter=auto-gera 24 chars forte): " REDIS_PASSWORD
@@ -154,8 +154,8 @@ fi
 
 # Wallet-Auth Secret Key
 if [ "$AUTO_NO" = true ]; then
-    WALLET_SECRET=$(openssl rand -base64 64 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 64)
-    echo "🔑 Wallet-Auth - SECRET_KEY: (auto-gerada 64 chars)"
+    WALLET_SECRET="mfx%tka!hm##tkd4#dn5+y9y+02r^w&4@rar9(0p!0119r7udc"
+    echo "🔑 Wallet-Auth - SECRET_KEY: (padrão)"
 else
     while true; do
         read -s -p "🔑 Wallet-Auth - SECRET_KEY HMAC (mín 32 chars, Enter=auto-gera 64 chars): " WALLET_SECRET
@@ -174,8 +174,8 @@ fi
 
 # History API Secret
 if [ "$AUTO_NO" = true ]; then
-    HISTORY_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 48)
-    echo "🔑 History - API_SECRET_KEY: (auto-gerada 48 chars)"
+    HISTORY_SECRET="API0v8RZvgJI0X3rGvE4svIhr7C7sccaRKILbDjTPEDArxFtv"
+    echo "🔑 History - API_SECRET_KEY: (padrão)"
 else
     while true; do
         read -s -p "🔑 History - API_SECRET_KEY (mín 24 chars, Enter=auto-gera 48 chars): " HISTORY_SECRET
