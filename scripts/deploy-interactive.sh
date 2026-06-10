@@ -102,8 +102,8 @@ else
 fi
 
 if [ "$AUTO_NO" = true ]; then
-    MYSQL_PASSWORD="ggsoft_test_2025"
-    echo "🗄️  MySQL - Senha: $MYSQL_PASSWORD (padrão)"
+    MYSQL_PASSWORD=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9!@#$%^&*' | head -c 32)
+    echo "🗄️  MySQL - Senha: (auto-gerada 32 chars)"
 else
     while true; do
         read -s -p "🗄️  MySQL - Senha (mín 12 chars, Enter=auto-gera 32 chars forte): " MYSQL_PASSWORD
