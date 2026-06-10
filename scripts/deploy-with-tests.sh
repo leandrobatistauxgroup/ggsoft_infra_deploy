@@ -16,7 +16,17 @@ echo -e "\033[0;34m🔄 Atualizando repositórios...\033[0m"
 "$SCRIPT_DIR/setup-repos.sh"
 
 # Verificações obrigatórias antes do deploy
-# NOTA: pem/private.pem é gerado automaticamente pelo wallet-auth se não existir
+
+# Garantir que pem/private.pem existe no wallet-auth (gera se não existir)
+WALLET_PEM="$WORKSPACE_DIR/ggsoft_wallet-auth/pem/private.pem"
+if [ ! -f "$WALLET_PEM" ]; then
+    echo -e "\033[0;33m⚠️  $WALLET_PEM não encontrado — gerando chave RSA...\033[0m"
+    mkdir -p "$WORKSPACE_DIR/ggsoft_wallet-auth/pem"
+    # Gera chave RSA 2048 bits
+    openssl genrsa -out "$WALLET_PEM" 2048 2>/dev/null || \
+    (echo -e "\033[0;31m❌ Falha ao gerar chave RSA. Instale openssl ou forneça a chave manualmente.\033[0m"; exit 1)
+    echo -e "\033[0;32m✅ Chave RSA gerada: $WALLET_PEM\033[0m"
+fi
 
 # Sincroniza .env para todos os repos antes do build
 "$SCRIPT_DIR/sync-envs.sh"
