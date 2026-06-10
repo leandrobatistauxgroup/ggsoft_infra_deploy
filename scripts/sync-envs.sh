@@ -60,6 +60,18 @@ echo -e "${YELLOW}🎛️  System-Control → ggsoft_system-control/${NC}"
 mkdir -p "$WORKSPACE_DIR/ggsoft_system-control"
 cp "$ENVS_DIR/system-control.env" "$WORKSPACE_DIR/ggsoft_system-control/.env"
 echo -e "   ${GREEN}✓${NC} Copiado system-control.env"
+# Validar SERVER_IP
+if grep -q "SERVER_IP=localhost" "$WORKSPACE_DIR/ggsoft_system-control/.env" 2>/dev/null; then
+    echo -e "   ${RED}⚠️  AVISO: SERVER_IP está como 'localhost'!${NC}"
+    echo -e "   ${YELLOW}   O painel gerará URLs incorretas para os jogos.${NC}"
+    echo -e "   ${YELLOW}   Edite envs/system-control.env e defina o IP do servidor.${NC}"
+elif grep -q "SERVER_IP=" "$WORKSPACE_DIR/ggsoft_system-control/.env" 2>/dev/null; then
+    server_ip=$(grep "SERVER_IP=" "$WORKSPACE_DIR/ggsoft_system-control/.env" | cut -d'=' -f2 | head -1)
+    echo -e "   ${GREEN}✓ SERVER_IP configurado: $server_ip${NC}"
+else
+    echo -e "   ${RED}⚠️  AVISO: SERVER_IP não encontrado!${NC}"
+    echo -e "   ${YELLOW}   Adicione SERVER_IP=<ip_do_servidor> em envs/system-control.env${NC}"
+fi
 
 
 # Nginx (não precisa de .env, config via docker-compose)

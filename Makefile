@@ -72,8 +72,21 @@ setup: ## Setup inicial - cria rede Docker, verifica envs e garante .build
 			echo "   $(RED)✗ $$env.env não encontrado$(NC)"; \
 		fi; \
 	done
+	@echo "$(BLUE)3. Verificando SERVER_IP no system-control.env...$(NC)"
+	@if grep -q "SERVER_IP=localhost" $(ENVS_DIR)/system-control.env 2>/dev/null; then \
+		echo "   $(RED)✗ ERRO: SERVER_IP está como 'localhost'!$(NC)"; \
+		echo "   $(YELLOW)   Edite $(ENVS_DIR)/system-control.env e defina o IP do servidor$(NC)"; \
+		exit 1; \
+	elif grep -q "SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null; then \
+		server_ip=$$(grep "SERVER_IP=" $(ENVS_DIR)/system-control.env | cut -d'=' -f2); \
+		echo "   ✓ SERVER_IP configurado: $$server_ip"; \
+	else \
+		echo "   $(RED)✗ SERVER_IP não encontrado em system-control.env$(NC)"; \
+		echo "   $(YELLOW)   Adicione SERVER_IP=<ip_do_servidor> no arquivo$(NC)"; \
+		exit 1; \
+	fi
 	@make init-build
-	@echo "$(YELLOW)3. IMPORTANTE: Edite os arquivos em $(ENVS_DIR)/ com suas senhas!$(NC)"
+	@echo "$(YELLOW)4. IMPORTANTE: Edite os arquivos em $(ENVS_DIR)/ com suas senhas!$(NC)"
 	@echo "$(GREEN)=== Setup concluído. Execute 'make start' para iniciar ===$(NC)"
 
 init-build: ## Garante que .build é arquivo (não pasta) - necessário para RGS
