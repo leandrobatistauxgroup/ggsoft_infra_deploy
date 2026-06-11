@@ -155,7 +155,34 @@ if [ "$TEST_FAILED" -eq 0 ]; then
         elif [ "$STATUS" = "unhealthy" ]; then
             echo -e "   ${RED}✗ wallet-auth unhealthy — capturando logs${NC}"
             printf "\n=== LOGS wallet-auth ===\n" | tee -a "$TEST_OUTPUT"
-            docker logs python-app-wallet-auth 2>&1 | tee -a "$TEST_OUTPUT"
+            WALLET_LOGS=$(docker logs python-app-wallet-auth 2>&1)
+            echo "$WALLET_LOGS" | tee -a "$TEST_OUTPUT"
+
+            # Detecta credencial incompatível entre wallet-auth.env e volume MySQL
+            if echo "$WALLET_LOGS" | grep -q "Access denied"; then
+                echo ""
+                echo -e "${RED}╔══════════════════════════════════════════════════════════════════╗${NC}"
+                echo -e "${RED}║  ⚠️  CREDENCIAIS INCOMPATÍVEIS COM O VOLUME MYSQL                ║${NC}"
+                echo -e "${RED}╚══════════════════════════════════════════════════════════════════╝${NC}"
+                echo ""
+                echo -e "${YELLOW}O volume MySQL contém dados de um deploy anterior com senhas${NC}"
+                echo -e "${YELLOW}diferentes das geradas agora. O wallet-auth não consegue autenticar.${NC}"
+                echo ""
+                echo -e "${CYAN}Para corrigir, execute:${NC}"
+                echo -e "${CYAN}  make deploy-n${NC}"
+                echo ""
+                echo -e "${RED}⚠️  IMPACTO DO make deploy-n:${NC}"
+                echo -e "${RED}  • Volume MySQL será apagado — TODOS OS DADOS DO BANCO SERÃO PERDIDOS${NC}"
+                echo -e "${RED}  • Volume Redis será apagado — sessões ativas encerradas${NC}"
+                echo -e "${RED}  • Novas senhas geradas para todos os serviços${NC}"
+                echo -e "${RED}  • Banco recriado do zero via init.sql${NC}"
+                echo ""
+                echo -e "${YELLOW}Se quiser preservar os dados antes, execute primeiro:${NC}"
+                MYSQL_ROOT_PASS_HINT=$(grep "^MYSQL_ROOT_PASSWORD=" "$ENVS_DIR/mysql.env" 2>/dev/null | cut -d'=' -f2 | head -1)
+                echo -e "${YELLOW}  docker exec mysql_database mysqldump -uroot -p'${MYSQL_ROOT_PASS_HINT:-<SUA_SENHA_ROOT}' --all-databases > backup_\$(date +%Y%m%d).sql${NC}"
+                echo ""
+                printf "\n=== DIAGNÓSTICO: credenciais incompatíveis com volume MySQL ===\n" | tee -a "$TEST_OUTPUT"
+            fi
             break
         fi
         echo -e "   aguardando... [$i/30] ($STATUS)"
