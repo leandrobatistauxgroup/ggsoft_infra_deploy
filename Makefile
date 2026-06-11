@@ -49,7 +49,9 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 		echo "$(YELLOW)🔄 Makefile atualizado! Recarregando $(MAKECMDGOALS)...$(NC)"; \
 		exec $(MAKE) $(MAKECMDGOALS) FLAGS="$(FLAGS)"; \
 	fi
-	@echo "$(BLUE)2. Verificando SERVER_IP...$(NC)"
+	@echo "$(BLUE)2. Atualizando repositórios...$(NC)"
+	@./scripts/setup-repos.sh
+	@echo "$(BLUE)3. Verificando SERVER_IP...$(NC)"
 	@export SERVER_IP_DETECTED=""; \
 	CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
 	if [ -z "$$CURRENT_IP" ] || [ "$$CURRENT_IP" = "localhost" ] || [ "$$CURRENT_IP" = "$${SERVER_IP:-localhost}" ]; then \
@@ -77,17 +79,18 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 		echo "$(GREEN)✓ SERVER_IP configurado: $$CURRENT_IP$(NC)"; \
 		export SERVER_IP_DETECTED="$$CURRENT_IP"; \
 	fi; \
-	echo "$(BLUE)3. Configuração interativa (senhas, usuários)...$(NC)"; \
+	echo "$(BLUE)4. Configuração interativa (senhas, usuários)...$(NC)"; \
 	if [ -n "$$SERVER_IP_DETECTED" ]; then \
 		SERVER_IP="$$SERVER_IP_DETECTED" ./scripts/deploy-interactive.sh $(FLAGS) || true; \
 	else \
 		./scripts/deploy-interactive.sh $(FLAGS) || true; \
 	fi
-	@./scripts/deploy-with-tests.sh
-	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
+	@echo "$(BLUE)5. Sincronizando .env para todos os projetos...$(NC)"
 	@./scripts/sync-envs.sh
-	@echo "$(GREEN)=== Iniciando todos os serviços ===${NC}"
-	@make start
+	@echo "$(BLUE)6. Gate de qualidade (testes)...$(NC)"
+	@./scripts/deploy-with-tests.sh
+	@echo "$(GREEN)7. Iniciando serviços...$(NC)"
+	@$(MAKE) start FLAGS="$(FLAGS)"
 
 deploy-y: ## Deploy com auto-yes (mantém configs ou aceita defaults)
 	@$(MAKE) deploy FLAGS=-y
@@ -191,15 +194,13 @@ init-build: ## Garante que .build é arquivo (não pasta) - necessário para RGS
 		echo "   ✓ .build OK"; \
 	fi
 
-start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend) - SEMPRE rebuilda
-	@echo "$(GREEN)=== Iniciando plataforma GGSoft (4 fases) - Rebuild completo ===$(NC)"
-	@make init-build
-	@echo "$(BLUE)Fase 0/4: Derrubando containers existentes para rebuild...$(NC)"
+start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend)
+	@echo "$(GREEN)=== Iniciando plataforma GGSoft (4 fases) ===$(NC)"
+	@$(MAKE) init-build
+	@echo "$(BLUE)Fase 0/4: Derrubando containers existentes...$(NC)"
 	@docker ps -q --filter "name=ggsoft" | xargs -r docker stop 2>/dev/null || true
 	@docker ps -aq --filter "name=ggsoft" | xargs -r docker rm -f 2>/dev/null || true
 	@$(DOCKER_COMPOSE) down 2>/dev/null || true
-	@$(DOCKER_COMPOSE) --profile test down 2>/dev/null || true
-	@$(DOCKER_COMPOSE) --profile integration-test down 2>/dev/null || true
 	@echo "$(BLUE)Criando rede Docker rede-ggsoft...$(NC)"
 	@docker network create rede-ggsoft 2>/dev/null || echo "   Rede já existe"
 	@echo "$(BLUE)Fase 1/4: Infraestrutura (mysql, redis)...$(NC)"
@@ -207,8 +208,13 @@ start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend
 	@echo "$(BLUE)Aguardando healthcheck da infra...$(NC)"
 	@sleep 5
 	@echo "$(BLUE)Fase 2/4: Build das aplicações...$(NC)"
-	@$(DOCKER_COMPOSE) build --no-cache $(APPS_SERVICES)
-	@echo "$(BLUE)Fase 3/4: Subindo aplicações (force recreate)...$(NC)"
+	@if [ "$(FLAGS)" = "-n" ]; then \
+		echo "$(YELLOW)   Modo -n: build sem cache$(NC)"; \
+		$(DOCKER_COMPOSE) build --no-cache $(APPS_SERVICES); \
+	else \
+		$(DOCKER_COMPOSE) build $(APPS_SERVICES); \
+	fi
+	@echo "$(BLUE)Fase 3/4: Subindo aplicações...$(NC)"
 	@$(DOCKER_COMPOSE) up -d --force-recreate $(APPS_SERVICES)
 	@echo "$(BLUE)Aguardando healthcheck das aplicações...$(NC)"
 	@sleep 10
@@ -217,11 +223,15 @@ start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend
 	@echo "$(BLUE)Aguardando RGS...$(NC)"
 	@sleep 5
 	@echo "$(BLUE)Build do Frontend (system-control)...$(NC)"
-	@$(DOCKER_COMPOSE) build --no-cache system-control
+	@if [ "$(FLAGS)" = "-n" ]; then \
+		$(DOCKER_COMPOSE) build --no-cache system-control; \
+	else \
+		$(DOCKER_COMPOSE) build system-control; \
+	fi
 	@echo "$(BLUE)Subindo Frontend (nginx, system-control)...$(NC)"
 	@$(DOCKER_COMPOSE) up -d --force-recreate $(FRONTEND_SERVICES)
 	@echo "$(GREEN)=== Todos os serviços iniciados ===$(NC)"
-	@make status
+	@$(MAKE) status
 
 start-infra: ## Inicia só a infraestrutura (mysql, redis)
 	@echo "$(BLUE)=== Iniciando infraestrutura ===$(NC)"
