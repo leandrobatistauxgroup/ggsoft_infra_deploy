@@ -1,10 +1,7 @@
 #!/bin/bash
 # =============================================================================
-# Clona todos os repositórios da plataforma GGSoft como irmãos do _deploy
-# Uso: ./scripts/setup-repos.sh
+# Clona ou atualiza todos os repositórios da plataforma GGSoft
 # =============================================================================
-
-set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
@@ -17,6 +14,8 @@ NC='\033[0m'
 
 echo -e "${BLUE}=== Clonando repositórios GGSoft em: $WORKSPACE_DIR ===${NC}"
 echo ""
+
+mkdir -p "$WORKSPACE_DIR"
 
 # formato: "pasta|url"
 REPOS="
@@ -32,16 +31,23 @@ ggsoft_game_slot3x3|git@github-ggsoft:GGSoftBR/ggsoft_game_slot3x3.git
 landf_haxe_libs|git@github-ggsoft:GGSoftBR/landf_haxe_libs.git
 "
 
+ERRORS=0
+
 echo "$REPOS" | grep -v '^$' | while IFS='|' read -r folder url; do
     dest="$WORKSPACE_DIR/$folder"
 
     if [ -d "$dest/.git" ]; then
         echo -e "${YELLOW}↺  $folder já existe, atualizando...${NC}"
-        git -C "$dest" pull origin main --ff-only 2>/dev/null || echo -e "   ${YELLOW}⚠ pull ignorado (sem upstream ou conflito)${NC}"
+        git -C "$dest" pull origin main --ff-only 2>/dev/null \
+            || git -C "$dest" pull origin master --ff-only 2>/dev/null \
+            || echo -e "   ${YELLOW}⚠ pull ignorado (sem upstream, conflito ou branch diferente)${NC}"
     else
         echo -e "${BLUE}⬇  Clonando $folder...${NC}"
-        git clone "$url" "$dest"
-        echo -e "   ${GREEN}✓ $folder clonado${NC}"
+        if git clone "$url" "$dest" 2>/dev/null; then
+            echo -e "   ${GREEN}✓ $folder clonado${NC}"
+        else
+            echo -e "   ${RED}✗ $folder não pôde ser clonado (verificar SSH/rede)${NC}"
+        fi
     fi
 done
 

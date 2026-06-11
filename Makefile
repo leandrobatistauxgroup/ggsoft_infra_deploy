@@ -15,6 +15,13 @@
 # Detecta docker compose V2 (plugin) ou docker-compose V1 (binário legado)
 DOCKER_COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
+# Portable: sed -i (Linux) vs sed -i '' (Mac)
+ifeq ($(shell uname -s),Darwin)
+  SED_I := sed -i ''
+else
+  SED_I := sed -i
+endif
+
 # Diretórios
 ENVS_DIR := ./envs
 
@@ -42,7 +49,7 @@ help: ## Mostra esta ajuda
 deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	@echo "$(GREEN)=== Deploy GGSoft Completo ===$(NC)"
 	@echo "$(BLUE)1. Atualizando repositório de deploy...$(NC)"
-	@MAKEFILE_HASH_BEFORE=$$(md5sum $(MAKEFILE_LIST) 2>/dev/null | md5sum | cut -d' ' -f1); \
+	@MAKEFILE_HASH_BEFORE=$$(cat $(MAKEFILE_LIST) | (md5sum 2>/dev/null || md5 2>/dev/null) | cut -d' ' -f1); \
 	if ls $(ENVS_DIR)/*.env 2>/dev/null | grep -q .; then \
 		mkdir -p /tmp/.ggsoft_env_backup && cp $(ENVS_DIR)/*.env /tmp/.ggsoft_env_backup/; \
 	fi; \
@@ -52,7 +59,7 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 		mkdir -p $(ENVS_DIR) && cp /tmp/.ggsoft_env_backup/*.env $(ENVS_DIR)/ 2>/dev/null || true; \
 		rm -rf /tmp/.ggsoft_env_backup; \
 	fi; \
-	MAKEFILE_HASH_AFTER=$$(md5sum $(MAKEFILE_LIST) 2>/dev/null | md5sum | cut -d' ' -f1); \
+	MAKEFILE_HASH_AFTER=$$(cat $(MAKEFILE_LIST) | (md5sum 2>/dev/null || md5 2>/dev/null) | cut -d' ' -f1); \
 	if [ "$$MAKEFILE_HASH_BEFORE" != "$$MAKEFILE_HASH_AFTER" ]; then \
 		echo "$(YELLOW)🔄 Makefile atualizado! Recarregando $(MAKECMDGOALS)...$(NC)"; \
 		exec $(MAKE) $(MAKECMDGOALS) FLAGS="$(FLAGS)"; \
@@ -63,8 +70,13 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	@export SERVER_IP_DETECTED=""; \
 	CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
 	if [ -z "$$CURRENT_IP" ] || [ "$$CURRENT_IP" = "localhost" ] || [ "$$CURRENT_IP" = "$${SERVER_IP:-localhost}" ]; then \
+		_detect_ip() { \
+			hostname -I 2>/dev/null | awk '{print $$1}' | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1; \
+		}; \
 		if [ "$(FLAGS)" = "-n" ] || [ "$(FLAGS)" = "-y" ]; then \
-			DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' || echo ""); \
+			DETECTED_IP=$$(_detect_ip); \
+			[ -z "$$DETECTED_IP" ] && DETECTED_IP=$$(ipconfig getifaddr en0 2>/dev/null || true); \
+			[ -z "$$DETECTED_IP" ] && DETECTED_IP=$$(ip route get 1 2>/dev/null | sed -n 's/.*src \([0-9.]*\) .*/\1/p'); \
 			if [ -n "$$DETECTED_IP" ]; then \
 				echo "$(GREEN)✓ IP detectado automaticamente: $$DETECTED_IP$(NC)"; \
 				export SERVER_IP_DETECTED="$$DETECTED_IP"; \
@@ -78,7 +90,9 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 				echo "$(GREEN)✓ Hostname '$$HOSTNAME' contém 'local' — usando SERVER_IP=localhost$(NC)"; \
 				export SERVER_IP_DETECTED="localhost"; \
 			else \
-				DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' || echo ""); \
+				DETECTED_IP=$$(_detect_ip); \
+				[ -z "$$DETECTED_IP" ] && DETECTED_IP=$$(ipconfig getifaddr en0 2>/dev/null || true); \
+				[ -z "$$DETECTED_IP" ] && DETECTED_IP=$$(ip route get 1 2>/dev/null | sed -n 's/.*src \([0-9.]*\) .*/\1/p'); \
 				if [ -n "$$DETECTED_IP" ]; then \
 					echo "$(GREEN)✓ IP detectado automaticamente: $$DETECTED_IP$(NC)"; \
 					export SERVER_IP_DETECTED="$$DETECTED_IP"; \
@@ -113,12 +127,12 @@ deploy-n: ## Deploy com auto-no (recria tudo com padrões e limpa volumes)
 	@$(MAKE) deploy FLAGS=-n
 
 deploy-quick: ## Deploy rápido sem testes - atualiza _deploy + envs + sync + start
-	@echo "$(YELLOW)=== Deploy GGSoft SEM testes ===${NC}"
-	@echo "$(RED)⚠️  AVISO: Pulando testes de qualidade!${NC}"
-	@./scripts/deploy-interactive.sh
+	@echo "$(YELLOW)=== Deploy GGSoft SEM testes ===$(NC)"
+	@echo "$(RED)⚠️  AVISO: Pulando testes de qualidade!$(NC)"
+	@./scripts/deploy-interactive.sh $(FLAGS)
 	@./scripts/sync-envs.sh
-	@echo "$(GREEN)=== Iniciando todos os serviços ===${NC}"
-	@make start
+	@echo "$(GREEN)=== Iniciando todos os serviços ===$(NC)"
+	@$(MAKE) start FLAGS="$(FLAGS)"
 
 sync: ## Sincroniza .env do deploy para todos os projetos
 	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
@@ -137,17 +151,14 @@ set-server-ip: ## Detecta ambiente e configura SERVER_IP (local=auto, remoto=per
 	fi; \
 	if [ "$$IS_LOCAL" = "yes" ]; then \
 		echo "$(GREEN)✓ Ambiente local detectado — usando localhost$(NC)"; \
-		sed -i "s/^SERVER_IP=.*/SERVER_IP=localhost/" $(ENVS_DIR)/system-control.env; \
+		$(SED_I) "s/^SERVER_IP=.*/SERVER_IP=localhost/" $(ENVS_DIR)/system-control.env; \
 		echo "$(GREEN)✓ SERVER_IP=localhost configurado$(NC)"; \
 	else \
 		echo "$(YELLOW)⚠️  Ambiente remoto/SSH detectado$(NC)"; \
-		DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' || echo ""); \
-		if [ -z "$$DETECTED_IP" ]; then \
-			DETECTED_IP=$$(ip route get 1 2>/dev/null | head -1 | sed -n 's/.*src \([0-9.]*\).*/\1/p' || echo ""); \
-		fi; \
-		if [ -z "$$DETECTED_IP" ]; then \
-			DETECTED_IP=$$(ifconfig 2>/dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | head -1 || echo ""); \
-		fi; \
+		DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1); \
+		[ -z "$$DETECTED_IP" ] && DETECTED_IP=$$(ipconfig getifaddr en0 2>/dev/null || true); \
+		[ -z "$$DETECTED_IP" ] && DETECTED_IP=$$(ip route get 1 2>/dev/null | sed -n 's/.*src \([0-9.]*\) .*/\1/p'); \
+		[ -z "$$DETECTED_IP" ] && DETECTED_IP=$$(ifconfig 2>/dev/null | grep -Eo 'inet ([0-9]+\.){3}[0-9]+' | awk '{print $$2}' | grep -v '127.0.0.1' | head -1); \
 		if [ -n "$$DETECTED_IP" ]; then \
 			echo "$(BLUE)IP detectado: $$DETECTED_IP$(NC)"; \
 			read -p "Usar este IP? [Y/n] ou digite outro IP/dominio: " CONFIRM; \
@@ -160,7 +171,7 @@ set-server-ip: ## Detecta ambiente e configura SERVER_IP (local=auto, remoto=per
 			read -p "Digite o IP ou dominio do servidor: " FINAL_IP; \
 		fi; \
 		if [ -n "$$FINAL_IP" ]; then \
-			sed -i "s/^SERVER_IP=.*/SERVER_IP=$$FINAL_IP/" $(ENVS_DIR)/system-control.env; \
+			$(SED_I) "s/^SERVER_IP=.*/SERVER_IP=$$FINAL_IP/" $(ENVS_DIR)/system-control.env; \
 			echo "$(GREEN)✓ SERVER_IP=$$FINAL_IP configurado$(NC)"; \
 		else \
 			echo "$(RED)❌ IP não informado — SERVER_IP permanece inalterado$(NC)"; \
@@ -172,7 +183,7 @@ set-server-ip-manual: ## Configura IP manualmente (use: make set-server-ip IP=19
 		echo "$(RED)❌ Especifique o IP: make set-server-ip IP=192.168.1.100$(NC)"; \
 		exit 1; \
 	fi; \
-	sed -i "s/^SERVER_IP=.*/SERVER_IP=$(IP)/" $(ENVS_DIR)/system-control.env; \
+	$(SED_I) "s/^SERVER_IP=.*/SERVER_IP=$(IP)/" $(ENVS_DIR)/system-control.env; \
 	echo "$(GREEN)✓ SERVER_IP configurado: $(IP)$(NC)"
 
 setup: ## Setup inicial - cria rede Docker, verifica envs e garante .build
@@ -195,7 +206,7 @@ setup: ## Setup inicial - cria rede Docker, verifica envs e garante .build
 	else \
 		echo "   ✓ SERVER_IP configurado: $$CURRENT_IP"; \
 	fi
-	@make init-build
+	@$(MAKE) init-build
 	@echo "$(YELLOW)4. IMPORTANTE: Edite os arquivos em $(ENVS_DIR)/ com suas senhas!$(NC)"
 	@echo "$(GREEN)=== Setup concluído. Execute 'make start' para iniciar ===$(NC)"
 
@@ -212,8 +223,8 @@ start: ## Inicia todos os serviços (ordem: infra → apps → game → frontend
 	@echo "$(GREEN)=== Iniciando plataforma GGSoft (4 fases) ===$(NC)"
 	@$(MAKE) init-build
 	@echo "$(BLUE)Fase 0/4: Derrubando containers existentes...$(NC)"
-	@docker ps -q --filter "name=ggsoft" | xargs -r docker stop 2>/dev/null || true
-	@docker ps -aq --filter "name=ggsoft" | xargs -r docker rm -f 2>/dev/null || true
+	@CONTAINERS=$$(docker ps -q --filter "name=ggsoft" 2>/dev/null); [ -n "$$CONTAINERS" ] && docker stop $$CONTAINERS 2>/dev/null || true
+	@CONTAINERS=$$(docker ps -aq --filter "name=ggsoft" 2>/dev/null); [ -n "$$CONTAINERS" ] && docker rm -f $$CONTAINERS 2>/dev/null || true
 	@$(DOCKER_COMPOSE) down 2>/dev/null || true
 	@echo "$(BLUE)Criando rede Docker rede-ggsoft...$(NC)"
 	@docker network create rede-ggsoft 2>/dev/null || echo "   Rede já existe"
@@ -257,7 +268,7 @@ start-apps: ## Inicia aplicações (dependem da infra)
 
 start-rgs: ## Inicia game server (depende das apps)
 	@echo "$(BLUE)=== Iniciando RGS ===$(NC)"
-	@make init-build
+	@$(MAKE) init-build
 	$(DOCKER_COMPOSE) up -d $(GAME_SERVICES)
 
 wait-health: ## Aguarda todos os healthchecks passarem

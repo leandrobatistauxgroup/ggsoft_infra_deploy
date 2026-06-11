@@ -3,93 +3,55 @@
 # Sincroniza arquivos .env do deploy para todos os projetos
 # =============================================================================
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENVS_DIR="${ENVS_DIR:-$SCRIPT_DIR/../envs}"
 WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
+RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}=== Sincronizando .env para todos os projetos ===${NC}"
 echo ""
 
-# MySQL
-echo -e "${YELLOW}🗄️  MySQL → ggsoft_infra_mysql/${NC}"
-mkdir -p "$WORKSPACE_DIR/ggsoft_infra_mysql"
-cp "$ENVS_DIR/mysql.env" "$WORKSPACE_DIR/ggsoft_infra_mysql/.env"
-echo -e "   ${GREEN}✓${NC} Copiado mysql.env"
+_copy() {
+    local src="$1"
+    local dest_dir="$2"
+    local label="$3"
+    if [ -f "$src" ]; then
+        mkdir -p "$dest_dir"
+        cp "$src" "$dest_dir/.env" && echo -e "   ${GREEN}✓${NC} $label" || echo -e "   ${RED}✗ falha ao copiar $label${NC}"
+    else
+        echo -e "   ${YELLOW}⚠ $(basename "$src") não encontrado — pulando $label${NC}"
+    fi
+}
 
-# Redis
-echo -e "${YELLOW}🔐 Redis → ggsoft_infra_redis/${NC}"
-mkdir -p "$WORKSPACE_DIR/ggsoft_infra_redis"
-cp "$ENVS_DIR/redis.env" "$WORKSPACE_DIR/ggsoft_infra_redis/.env"
-echo -e "   ${GREEN}✓${NC} Copiado redis.env"
+_copy "$ENVS_DIR/mysql.env"        "$WORKSPACE_DIR/ggsoft_infra_mysql"    "mysql.env → ggsoft_infra_mysql/"
+_copy "$ENVS_DIR/redis.env"        "$WORKSPACE_DIR/ggsoft_infra_redis"    "redis.env → ggsoft_infra_redis/"
+_copy "$ENVS_DIR/wallet-auth.env"  "$WORKSPACE_DIR/ggsoft_wallet-auth"    "wallet-auth.env → ggsoft_wallet-auth/"
+_copy "$ENVS_DIR/history.env"      "$WORKSPACE_DIR/ggsoft_history"        "history.env → ggsoft_history/"
+_copy "$ENVS_DIR/rgs.env"          "$WORKSPACE_DIR/ggsoft_rgs_slot"       "rgs.env → ggsoft_rgs_slot/"
+_copy "$ENVS_DIR/system-control.env" "$WORKSPACE_DIR/ggsoft_system-control" "system-control.env → ggsoft_system-control/"
 
-# Wallet-Auth (CS)
-echo -e "${YELLOW}💰 Wallet-Auth (CS) → ggsoft_wallet-auth/${NC}"
-mkdir -p "$WORKSPACE_DIR/ggsoft_wallet-auth"
-cp "$ENVS_DIR/wallet-auth.env" "$WORKSPACE_DIR/ggsoft_wallet-auth/.env"
-echo -e "   ${GREEN}✓${NC} Copiado wallet-auth.env"
-
-# History
-echo -e "${YELLOW}📜 History → ggsoft_history/${NC}"
-mkdir -p "$WORKSPACE_DIR/ggsoft_history"
-cp "$ENVS_DIR/history.env" "$WORKSPACE_DIR/ggsoft_history/.env"
-echo -e "   ${GREEN}✓${NC} Copiado history.env"
-
-# Math
-echo -e "${YELLOW}🔢 Math → ggsoft_math-3x3/${NC}"
+# Math: valor fixo, sem arquivo de origem
 mkdir -p "$WORKSPACE_DIR/ggsoft_math-3x3"
-cat > "$WORKSPACE_DIR/ggsoft_math-3x3/.env" << EOF
-SERVER_PORT=49235
-EOF
-echo -e "   ${GREEN}✓${NC} Criado math.env (SERVER_PORT=49235)"
+printf 'SERVER_PORT=49235\n' > "$WORKSPACE_DIR/ggsoft_math-3x3/.env" \
+    && echo -e "   ${GREEN}✓${NC} math → ggsoft_math-3x3/" \
+    || echo -e "   ${RED}✗ falha ao criar math .env${NC}"
 
-# RGS
-echo -e "${YELLOW}🎮 RGS → ggsoft_rgs_slot/${NC}"
-mkdir -p "$WORKSPACE_DIR/ggsoft_rgs_slot"
-cp "$ENVS_DIR/rgs.env" "$WORKSPACE_DIR/ggsoft_rgs_slot/.env"
-echo -e "   ${GREEN}✓${NC} Copiado rgs.env"
-
-# System-Control
-echo -e "${YELLOW}🎛️  System-Control → ggsoft_system-control/${NC}"
-mkdir -p "$WORKSPACE_DIR/ggsoft_system-control"
-cp "$ENVS_DIR/system-control.env" "$WORKSPACE_DIR/ggsoft_system-control/.env"
-echo -e "   ${GREEN}✓${NC} Copiado system-control.env"
-# Validar SERVER_IP
-if grep -q "SERVER_IP=localhost" "$WORKSPACE_DIR/ggsoft_system-control/.env" 2>/dev/null; then
-    echo -e "   ${RED}⚠️  AVISO: SERVER_IP está como 'localhost'!${NC}"
-    echo -e "   ${YELLOW}   O painel gerará URLs incorretas para os jogos.${NC}"
-    echo -e "   ${YELLOW}   Edite envs/system-control.env e defina o IP do servidor.${NC}"
-elif grep -q "SERVER_IP=" "$WORKSPACE_DIR/ggsoft_system-control/.env" 2>/dev/null; then
-    server_ip=$(grep "SERVER_IP=" "$WORKSPACE_DIR/ggsoft_system-control/.env" | cut -d'=' -f2 | head -1)
-    echo -e "   ${GREEN}✓ SERVER_IP configurado: $server_ip${NC}"
-else
-    echo -e "   ${RED}⚠️  AVISO: SERVER_IP não encontrado!${NC}"
-    echo -e "   ${YELLOW}   Adicione SERVER_IP=<ip_do_servidor> em envs/system-control.env${NC}"
+# Valida SERVER_IP no system-control
+if [ -f "$WORKSPACE_DIR/ggsoft_system-control/.env" ]; then
+    server_ip=$(grep "^SERVER_IP=" "$WORKSPACE_DIR/ggsoft_system-control/.env" 2>/dev/null | cut -d'=' -f2 | head -1)
+    if [ -z "$server_ip" ]; then
+        echo -e "   ${RED}⚠️  SERVER_IP não encontrado em system-control.env${NC}"
+    elif [ "$server_ip" = "localhost" ]; then
+        echo -e "   ${YELLOW}⚠️  SERVER_IP=localhost — URLs dos jogos podem não funcionar externamente${NC}"
+    else
+        echo -e "   ${GREEN}✓ SERVER_IP configurado: $server_ip${NC}"
+    fi
 fi
-
-
-# Nginx (não precisa de .env, config via docker-compose)
-echo -e "${YELLOW}🌐 Nginx → sem .env (config via docker-compose)${NC}"
-
-# Slot 3x3 (não precisa de .env, é só assets)
-echo -e "${YELLOW}🎰 Slot 3x3 → sem .env (só assets)${NC}"
 
 echo ""
 echo -e "${GREEN}=== Sincronização concluída! ===${NC}"
-echo ""
-echo -e "${BLUE}Projetos configurados:${NC}"
-echo "   • ggsoft_infra_mysql/.env"
-echo "   • ggsoft_infra_redis/.env"
-echo "   • ggsoft_wallet-auth/.env"
-echo "   • ggsoft_history/.env"
-echo "   • ggsoft_math-3x3/.env"
-echo "   • ggsoft_rgs_slot/.env"
-echo "   • ggsoft_system-control/.env"
-echo ""
-echo -e "${YELLOW}Nota:${NC} Cada projeto agora pode ser rodado individualmente com 'make up'"

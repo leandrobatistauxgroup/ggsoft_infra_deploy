@@ -247,6 +247,7 @@ echo ""
 mkdir -p "$ENVS_DIR"
 
 # Gerar init.sql dinamicamente para o MySQL (com usuário correto)
+mkdir -p "$WORKSPACE_DIR/ggsoft_infra_mysql"
 cat > "$WORKSPACE_DIR/ggsoft_infra_mysql/init.sql" << EOF
 CREATE DATABASE IF NOT EXISTS cs1;
 GRANT ALL PRIVILEGES ON cs1.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;

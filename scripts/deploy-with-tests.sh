@@ -12,6 +12,14 @@ ENVS_DIR="${ENVS_DIR:-$SCRIPT_DIR/../envs}"
 
 DC="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
 
+# Garante limpeza de containers de teste mesmo em caso de CTRL+C ou erro
+_cleanup_tests() {
+    $DC down 2>/dev/null || true
+    $DC --profile test down 2>/dev/null || true
+    $DC --profile integration-test down 2>/dev/null || true
+}
+trap _cleanup_tests EXIT INT TERM
+
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 RED='\033[0;31m'
@@ -67,14 +75,21 @@ if ! $DC up -d mysql-test 2>&1 | tee -a "$TEST_OUTPUT"; then
 fi
 
 if [ "$TEST_FAILED" -eq 0 ]; then
-    echo -e "${YELLOW}Aguardando MySQL de teste aceitar conexões...${NC}"
+    echo -e "${YELLOW}Aguardando MySQL de teste aceitar conexões (max 60s)...${NC}"
+    MYSQL_READY=0
     for i in $(seq 1 20); do
         if $DC exec -T mysql-test mysqladmin ping -h localhost -uroot -proot_test --silent 2>/dev/null; then
             echo -e "   ${GREEN}✓ MySQL pronto${NC}"
+            MYSQL_READY=1
             break
         fi
+        echo -e "   aguardando... (${i}/20)"
         sleep 3
     done
+    if [ "$MYSQL_READY" -eq 0 ]; then
+        echo -e "   ${RED}✗ MySQL não respondeu em 60s${NC}"
+        TEST_FAILED=1
+    fi
 
     echo -e "${YELLOW}🧪 Executando testes wallet-auth...${NC}"
     if ! $DC run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
@@ -83,8 +98,7 @@ if [ "$TEST_FAILED" -eq 0 ]; then
     fi
 fi
 
-# Limpa containers de teste unitário
-$DC down 2>/dev/null || true
+# Limpa containers de teste unitário (trap também faz isso no exit)
 $DC --profile test down 2>/dev/null || true
 
 # =============================================================================
