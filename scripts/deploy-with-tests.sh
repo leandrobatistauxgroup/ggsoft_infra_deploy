@@ -121,6 +121,13 @@ echo -e "   ${GREEN}✓ Portas liberadas${NC}"
 
 # --- Helpers da fase de integração -------------------------------------------
 
+# Lê valor de um .env removendo aspas externas (igual ao Docker Compose v2 faz).
+# Uso: _envval CHAVE arquivo
+_envval() {
+    grep "^$1=" "$2" 2>/dev/null | head -1 | cut -d'=' -f2- \
+        | sed -e "s/^[\"']//" -e "s/[\"']$//"
+}
+
 # Aguarda o database existir (init.sql pode ainda estar rodando). 0=ok, 1=timeout
 _wait_db() {
     for _ in $(seq 1 20); do
@@ -161,10 +168,10 @@ _start_infra_wait_db() {
 }
 
 if [ "$TEST_FAILED" -eq 0 ]; then
-    MYSQL_ROOT_PASS=$(grep "^MYSQL_ROOT_PASSWORD=" "$ENVS_DIR/mysql.env"       2>/dev/null | cut -d'=' -f2- | head -1)
-    DB_NAME=$(grep      "^MYSQL_DATABASE="      "$ENVS_DIR/wallet-auth.env"   2>/dev/null | cut -d'=' -f2- | head -1)
-    APP_USER=$(grep     "^MYSQL_USER="          "$ENVS_DIR/wallet-auth.env"   2>/dev/null | cut -d'=' -f2- | head -1)
-    APP_PASS=$(grep     "^MYSQL_PASSWORD="      "$ENVS_DIR/wallet-auth.env"   2>/dev/null | cut -d'=' -f2- | head -1)
+    MYSQL_ROOT_PASS=$(_envval MYSQL_ROOT_PASSWORD "$ENVS_DIR/mysql.env")
+    DB_NAME=$(_envval        MYSQL_DATABASE       "$ENVS_DIR/wallet-auth.env")
+    APP_USER=$(_envval       MYSQL_USER           "$ENVS_DIR/wallet-auth.env")
+    APP_PASS=$(_envval       MYSQL_PASSWORD       "$ENVS_DIR/wallet-auth.env")
     DB_NAME="${DB_NAME:-CS1}"
     APP_USER="${APP_USER:-ggsoft_user}"
 
