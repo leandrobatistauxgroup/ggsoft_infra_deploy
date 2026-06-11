@@ -43,7 +43,15 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	@echo "$(GREEN)=== Deploy GGSoft Completo ===$(NC)"
 	@echo "$(BLUE)1. Atualizando repositório de deploy...$(NC)"
 	@MAKEFILE_HASH_BEFORE=$$(md5sum $(MAKEFILE_LIST) 2>/dev/null | md5sum | cut -d' ' -f1); \
+	if ls $(ENVS_DIR)/*.env 2>/dev/null | grep -q .; then \
+		mkdir -p /tmp/.ggsoft_env_backup && cp $(ENVS_DIR)/*.env /tmp/.ggsoft_env_backup/; \
+	fi; \
+	git checkout -- $(ENVS_DIR)/ 2>/dev/null || true; \
 	git pull 2>/dev/null || echo "$(YELLOW)⚠️ Não foi possível atualizar _deploy (sem git ou sem remote)$(NC)"; \
+	if [ -d /tmp/.ggsoft_env_backup ]; then \
+		mkdir -p $(ENVS_DIR) && cp /tmp/.ggsoft_env_backup/*.env $(ENVS_DIR)/ 2>/dev/null || true; \
+		rm -rf /tmp/.ggsoft_env_backup; \
+	fi; \
 	MAKEFILE_HASH_AFTER=$$(md5sum $(MAKEFILE_LIST) 2>/dev/null | md5sum | cut -d' ' -f1); \
 	if [ "$$MAKEFILE_HASH_BEFORE" != "$$MAKEFILE_HASH_AFTER" ]; then \
 		echo "$(YELLOW)🔄 Makefile atualizado! Recarregando $(MAKECMDGOALS)...$(NC)"; \
