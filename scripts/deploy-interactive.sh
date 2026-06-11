@@ -56,10 +56,17 @@ if [ -f "$ENVS_DIR/mysql.env" ]; then
             exit 0
         fi
     fi
+else
+    # Nenhum .env encontrado — gera automaticamente sem perguntar
+    if [ "$AUTO_YES" = true ]; then
+        echo -e "${YELLOW}⚠️  Nenhum .env encontrado — gerando configurações automaticamente...${NC}"
+        AUTO_NO=true
+        AUTO_YES=false
+    fi
 fi
 
 if [ "$AUTO_NO" = true ]; then
-    echo -e "${CYAN}⚡ Modo automático (-n): usando valores padrão...${NC}"
+    echo -e "${CYAN}⚡ Modo automático: usando valores padrão e gerando senhas fortes...${NC}"
 fi
 
 echo ""
