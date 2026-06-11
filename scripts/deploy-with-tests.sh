@@ -168,20 +168,62 @@ if [ "$TEST_FAILED" -eq 0 ]; then
                 echo -e "${YELLOW}O volume MySQL contém dados de um deploy anterior com senhas${NC}"
                 echo -e "${YELLOW}diferentes das geradas agora. O wallet-auth não consegue autenticar.${NC}"
                 echo ""
-                echo -e "${CYAN}Para corrigir, execute:${NC}"
-                echo -e "${CYAN}  make deploy-n${NC}"
-                echo ""
-                echo -e "${RED}⚠️  IMPACTO DO make deploy-n:${NC}"
+                echo -e "${RED}⚠️  IMPACTO DA CORREÇÃO AUTOMÁTICA:${NC}"
                 echo -e "${RED}  • Volume MySQL será apagado — TODOS OS DADOS DO BANCO SERÃO PERDIDOS${NC}"
                 echo -e "${RED}  • Volume Redis será apagado — sessões ativas encerradas${NC}"
-                echo -e "${RED}  • Novas senhas geradas para todos os serviços${NC}"
-                echo -e "${RED}  • Banco recriado do zero via init.sql${NC}"
+                echo -e "${RED}  • Banco recriado do zero via init.sql com as senhas atuais${NC}"
                 echo ""
-                echo -e "${YELLOW}Se quiser preservar os dados antes, execute primeiro:${NC}"
+                echo -e "${YELLOW}Para fazer backup antes de continuar:${NC}"
                 MYSQL_ROOT_PASS_HINT=$(grep "^MYSQL_ROOT_PASSWORD=" "$ENVS_DIR/mysql.env" 2>/dev/null | cut -d'=' -f2 | head -1)
-                echo -e "${YELLOW}  docker exec mysql_database mysqldump -uroot -p'${MYSQL_ROOT_PASS_HINT:-<SUA_SENHA_ROOT}' --all-databases > backup_\$(date +%Y%m%d).sql${NC}"
+                echo -e "${YELLOW}  docker exec mysql_database mysqldump -uroot -p'${MYSQL_ROOT_PASS_HINT:-SENHA_ROOT}' --all-databases > backup_\$(date +%Y%m%d).sql${NC}"
                 echo ""
-                printf "\n=== DIAGNÓSTICO: credenciais incompatíveis com volume MySQL ===\n" | tee -a "$TEST_OUTPUT"
+                printf "\n=== DIAGNÓSTICO: credenciais incompatíveis com volume MySQL ===\n" >> "$TEST_OUTPUT"
+
+                # Pergunta se quer resolver agora (com timeout de 30s)
+                RESPOSTA=""
+                if [ -t 0 ]; then
+                    echo -e "${CYAN}Deseja limpar os volumes e continuar o deploy agora? [s/N] (30s):${NC}"
+                    read -t 30 -r RESPOSTA || RESPOSTA=""
+                else
+                    echo -e "${YELLOW}(Sessão não-interativa — cancele e execute: make deploy-n)${NC}"
+                fi
+
+                if [ "$RESPOSTA" = "s" ] || [ "$RESPOSTA" = "S" ] || [ "$RESPOSTA" = "y" ] || [ "$RESPOSTA" = "Y" ]; then
+                    echo -e "${YELLOW}Limpando volumes e reiniciando...${NC}"
+                    $DC down 2>/dev/null || true
+                    docker volume rm ggsoft_platform_mysql_data ggsoft_platform_redis_data 2>/dev/null || true
+
+                    echo -e "${YELLOW}Subindo mysql, redis e wallet-auth com volumes limpos...${NC}"
+                    $DC --profile integration-test up -d wallet-auth 2>&1 | tee -a "$TEST_OUTPUT" || true
+
+                    echo -e "${YELLOW}Aguardando banco '$DB_NAME' no MySQL...${NC}"
+                    for j in $(seq 1 20); do
+                        if docker exec mysql_database mysql -uroot -p"$MYSQL_ROOT_PASS" -e "USE $DB_NAME;" 2>/dev/null; then
+                            echo -e "   ${GREEN}✓ Database $DB_NAME pronto${NC}"
+                            break
+                        fi
+                        echo -e "   aguardando init.sql... [$j/20]"
+                        sleep 3
+                    done
+
+                    echo -e "${YELLOW}Aguardando wallet-auth (max 150s)...${NC}"
+                    for j in $(seq 1 30); do
+                        STATUS2=$(docker inspect --format='{{.State.Health.Status}}' python-app-wallet-auth 2>/dev/null)
+                        if [ "$STATUS2" = "healthy" ]; then
+                            WALLET_HEALTHY=1
+                            echo -e "   ${GREEN}✓ wallet-auth healthy após correção${NC}"
+                            break
+                        elif [ "$STATUS2" = "unhealthy" ]; then
+                            echo -e "   ${RED}✗ wallet-auth ainda unhealthy — verifique os logs acima${NC}"
+                            docker logs python-app-wallet-auth 2>&1 | tail -10 | tee -a "$TEST_OUTPUT"
+                            break
+                        fi
+                        echo -e "   aguardando... [$j/30] ($STATUS2)"
+                        sleep 5
+                    done
+                else
+                    echo -e "${YELLOW}Para corrigir manualmente execute: make deploy-n${NC}"
+                fi
             fi
             break
         fi
