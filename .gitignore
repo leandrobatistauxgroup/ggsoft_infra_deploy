@@ -8,10 +8,11 @@ reports/
 # Nota: .build deve ser arquivo, não pasta
 # Se virar pasta, o build falha
 
-# Ambiente
+# Ambiente — arquivos com credenciais (nunca commitar)
 .env
 .env.local
 .env.*.local
+envs/*.env
 
 # Docker
 .docker/
