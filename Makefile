@@ -63,14 +63,14 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 	@export SERVER_IP_DETECTED=""; \
 	CURRENT_IP=$$(grep "^SERVER_IP=" $(ENVS_DIR)/system-control.env 2>/dev/null | cut -d'=' -f2 | head -1); \
 	if [ -z "$$CURRENT_IP" ] || [ "$$CURRENT_IP" = "localhost" ] || [ "$$CURRENT_IP" = "$${SERVER_IP:-localhost}" ]; then \
-		if [ "$(FLAGS)" = "-n" ]; then \
+		if [ "$(FLAGS)" = "-n" ] || [ "$(FLAGS)" = "-y" ]; then \
 			DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' || echo ""); \
 			if [ -n "$$DETECTED_IP" ]; then \
-				echo "$(GREEN)✓ Modo -n: IP detectado automaticamente: $$DETECTED_IP$(NC)"; \
+				echo "$(GREEN)✓ IP detectado automaticamente: $$DETECTED_IP$(NC)"; \
 				export SERVER_IP_DETECTED="$$DETECTED_IP"; \
 			else \
-				echo "$(RED)❌ Não foi possível detectar IP automaticamente$(NC)"; \
-				exit 1; \
+				echo "$(YELLOW)⚠️  Não foi possível detectar IP — usando localhost$(NC)"; \
+				export SERVER_IP_DETECTED="localhost"; \
 			fi; \
 		else \
 			HOSTNAME=$$(hostname | tr '[:upper:]' '[:lower:]'); \
@@ -78,9 +78,15 @@ deploy: ## Deploy completo - atualiza _deploy + testes + envs + sync + start
 				echo "$(GREEN)✓ Hostname '$$HOSTNAME' contém 'local' — usando SERVER_IP=localhost$(NC)"; \
 				export SERVER_IP_DETECTED="localhost"; \
 			else \
-				echo "$(YELLOW)⚠️  SERVER_IP não configurado$(NC)"; \
-				echo "$(YELLOW)   Execute: make set-server-ip$(NC)"; \
-				exit 1; \
+				DETECTED_IP=$$(hostname -I 2>/dev/null | awk '{print $$1}' || echo ""); \
+				if [ -n "$$DETECTED_IP" ]; then \
+					echo "$(GREEN)✓ IP detectado automaticamente: $$DETECTED_IP$(NC)"; \
+					export SERVER_IP_DETECTED="$$DETECTED_IP"; \
+				else \
+					echo "$(YELLOW)⚠️  SERVER_IP não configurado$(NC)"; \
+					echo "$(YELLOW)   Execute: make set-server-ip$(NC)"; \
+					exit 1; \
+				fi; \
 			fi; \
 		fi; \
 	else \
