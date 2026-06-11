@@ -57,12 +57,13 @@ if [ -f "$ENVS_DIR/mysql.env" ]; then
         fi
     fi
 else
-    # Nenhum .env encontrado — gera automaticamente sem perguntar
-    if [ "$AUTO_YES" = true ]; then
-        echo -e "${YELLOW}⚠️  Nenhum .env encontrado — gerando configurações automaticamente...${NC}"
-        AUTO_NO=true
-        AUTO_YES=false
-    fi
+    # Nenhum .env encontrado — limpa volumes e gera tudo do zero
+    echo -e "${YELLOW}⚠️  Nenhum .env encontrado — limpando volumes e gerando novas configurações...${NC}"
+    $DC down 2>/dev/null || true
+    docker volume rm ggsoft_platform_mysql_data 2>/dev/null || true
+    docker volume rm ggsoft_platform_redis_data 2>/dev/null || true
+    AUTO_NO=true
+    AUTO_YES=false
 fi
 
 if [ "$AUTO_NO" = true ]; then
