@@ -90,7 +90,7 @@ if [ "$TEST_FAILED" -eq 0 ]; then
     fi
 
     echo -e "${YELLOW}🧪 Executando testes wallet-auth...${NC}"
-    if ! $DC run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
+    if ! $DC run --rm -T wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
         echo -e "${RED}❌ Testes do wallet-auth falharam${NC}"
         TEST_FAILED=1
     fi
@@ -179,51 +179,46 @@ if [ "$TEST_FAILED" -eq 0 ]; then
                 echo ""
                 printf "\n=== DIAGNÓSTICO: credenciais incompatíveis com volume MySQL ===\n" >> "$TEST_OUTPUT"
 
-                # Pergunta se quer resolver agora (com timeout de 30s)
-                RESPOSTA=""
-                if [ -t 0 ]; then
-                    echo -e "${CYAN}Deseja limpar os volumes e continuar o deploy agora? [s/N] (30s):${NC}"
-                    read -t 30 -r RESPOSTA || RESPOSTA=""
-                else
-                    echo -e "${YELLOW}(Sessão não-interativa — cancele e execute: make deploy-n)${NC}"
-                fi
+                # Countdown — Ctrl+C cancela e o trap limpa tudo
+                echo -e "${CYAN}Corrigindo automaticamente em 15s — Ctrl+C para cancelar${NC}"
+                for _c in $(seq 15 -1 1); do
+                    printf "\r   %ds... " $_c
+                    sleep 1
+                done
+                echo ""
 
-                if [ "$RESPOSTA" = "s" ] || [ "$RESPOSTA" = "S" ] || [ "$RESPOSTA" = "y" ] || [ "$RESPOSTA" = "Y" ]; then
-                    echo -e "${YELLOW}Limpando volumes e reiniciando...${NC}"
-                    $DC down 2>/dev/null || true
-                    docker volume rm ggsoft_platform_mysql_data ggsoft_platform_redis_data 2>/dev/null || true
+                echo -e "${YELLOW}Limpando volumes e reiniciando...${NC}"
+                $DC down 2>/dev/null || true
+                docker volume rm ggsoft_platform_mysql_data ggsoft_platform_redis_data 2>/dev/null || true
 
-                    echo -e "${YELLOW}Subindo mysql, redis e wallet-auth com volumes limpos...${NC}"
-                    $DC --profile integration-test up -d wallet-auth 2>&1 | tee -a "$TEST_OUTPUT" || true
+                echo -e "${YELLOW}Subindo mysql, redis e wallet-auth com volumes limpos...${NC}"
+                $DC --profile integration-test up -d wallet-auth 2>&1 | tee -a "$TEST_OUTPUT" || true
 
-                    echo -e "${YELLOW}Aguardando banco '$DB_NAME' no MySQL...${NC}"
-                    for j in $(seq 1 20); do
-                        if docker exec mysql_database mysql -uroot -p"$MYSQL_ROOT_PASS" -e "USE $DB_NAME;" 2>/dev/null; then
-                            echo -e "   ${GREEN}✓ Database $DB_NAME pronto${NC}"
-                            break
-                        fi
-                        echo -e "   aguardando init.sql... [$j/20]"
-                        sleep 3
-                    done
+                echo -e "${YELLOW}Aguardando banco '$DB_NAME' no MySQL...${NC}"
+                for j in $(seq 1 20); do
+                    if docker exec mysql_database mysql -uroot -p"$MYSQL_ROOT_PASS" -e "USE $DB_NAME;" 2>/dev/null; then
+                        echo -e "   ${GREEN}✓ Database $DB_NAME pronto${NC}"
+                        break
+                    fi
+                    echo -e "   aguardando init.sql... [$j/20]"
+                    sleep 3
+                done
 
-                    echo -e "${YELLOW}Aguardando wallet-auth (max 150s)...${NC}"
-                    for j in $(seq 1 30); do
-                        STATUS2=$(docker inspect --format='{{.State.Health.Status}}' python-app-wallet-auth 2>/dev/null)
-                        if [ "$STATUS2" = "healthy" ]; then
-                            WALLET_HEALTHY=1
-                            echo -e "   ${GREEN}✓ wallet-auth healthy após correção${NC}"
-                            break
-                        elif [ "$STATUS2" = "unhealthy" ]; then
-                            echo -e "   ${RED}✗ wallet-auth ainda unhealthy — verifique os logs acima${NC}"
-                            docker logs python-app-wallet-auth 2>&1 | tail -10 | tee -a "$TEST_OUTPUT"
-                            break
-                        fi
-                        echo -e "   aguardando... [$j/30] ($STATUS2)"
-                        sleep 5
-                    done
-                else
-                    echo -e "${YELLOW}Para corrigir manualmente execute: make deploy-n${NC}"
-                fi
+                echo -e "${YELLOW}Aguardando wallet-auth (max 150s)...${NC}"
+                for j in $(seq 1 30); do
+                    STATUS2=$(docker inspect --format='{{.State.Health.Status}}' python-app-wallet-auth 2>/dev/null)
+                    if [ "$STATUS2" = "healthy" ]; then
+                        WALLET_HEALTHY=1
+                        echo -e "   ${GREEN}✓ wallet-auth healthy após correção${NC}"
+                        break
+                    elif [ "$STATUS2" = "unhealthy" ]; then
+                        echo -e "   ${RED}✗ wallet-auth ainda unhealthy após limpeza — verifique os logs acima${NC}"
+                        docker logs python-app-wallet-auth 2>&1 | tail -10 | tee -a "$TEST_OUTPUT"
+                        break
+                    fi
+                    echo -e "   aguardando... [$j/30] ($STATUS2)"
+                    sleep 5
+                done
             fi
             break
         fi
@@ -244,7 +239,7 @@ if [ "$TEST_FAILED" -eq 0 ]; then
     sleep 10
 
     echo -e "${YELLOW}🧪 Executando testes de integração...${NC}"
-    if ! $DC --profile integration-test run --rm integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
+    if ! $DC --profile integration-test run --rm -T integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
         echo -e "${RED}❌ Testes de integração falharam${NC}"
         TEST_FAILED=1
     else
