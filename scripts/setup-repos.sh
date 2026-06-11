@@ -19,14 +19,16 @@ echo -e "${BLUE}=== Clonando repositórios GGSoft em: $WORKSPACE_DIR ===${NC}"
 echo ""
 
 declare -A REPOS
-REPOS["ggsoft_wallet-auth"]="git@github.com:GGSoftBR/ggsoft_core_wallet-auth.git"
-REPOS["ggsoft_history"]="git@github.com:GGSoftBR/ggsoft_core_history.git"
-REPOS["ggsoft_math_3x3"]="git@github.com:GGSoftBR/ggsoft_core_math_3x3.git"
-REPOS["ggsoft_rgs_3x3"]="git@github.com:GGSoftBR/ggsoft_core_rgs_slot3x3.git"
-REPOS["ggsoft_system-control"]="git@github.com:GGSoftBR/ggsoft_infra_system-control.git"
-REPOS["ggsoft_infra_mysql"]="git@github.com:GGSoftBR/ggsoft_infra_mysql.git"
-REPOS["ggsoft_infra_redis"]="git@github.com:GGSoftBR/ggsoft_infra_redis.git"
-REPOS["ggsoft_infra_nginx"]="git@github.com:GGSoftBR/ggsoft_infra_nginx.git"
+REPOS["ggsoft_wallet-auth"]="git@github.com:GGSoftBR/ggsoft_wallet-auth.git"
+REPOS["ggsoft_history"]="git@github-ggsoft:GGSoftBR/ggsoft_history.git"
+REPOS["ggsoft_math-3x3"]="git@github.com:GGSoftBR/ggsoft_math-3x3.git"
+REPOS["ggsoft_rgs_slot"]="git@github-ggsoft:GGSoftBR/ggsoft_rgs_slot.git"
+REPOS["ggsoft_system-control"]="git@github.com:GGSoftBR/ggsoft_system-control.git"
+REPOS["ggsoft_infra_mysql"]="git@github-ggsoft:GGSoftBR/ggsoft_infra_mysql.git"
+REPOS["ggsoft_infra_redis"]="git@github-ggsoft:GGSoftBR/ggsoft_infra_redis.git"
+REPOS["ggsoft_infra_nginx"]="git@github-ggsoft:GGSoftBR/ggsoft_infra_nginx.git"
+REPOS["ggsoft_game_slot3x3"]="git@github-ggsoft:GGSoftBR/ggsoft_game_slot3x3.git"
+REPOS["landf_haxe_libs"]="git@github-ggsoft:GGSoftBR/landf_haxe_libs.git"
 # NOTA: ggsoft_game_slot3x3 não é clonado no deploy - jogo compilado fica em nginx/games/
 
 for folder in "${!REPOS[@]}"; do

@@ -145,7 +145,7 @@ services:
 
   math:
     build:
-      context: ../ggsoft_math_3x3
+      context: ../ggsoft_math-3x3
       dockerfile: Dockerfile
     container_name: ggsoft-zmq-server-slot
     env_file:
@@ -164,7 +164,7 @@ services:
 
   rgs-fruit:
     build:
-      context: ../ggsoft_rgs_3x3
+      context: ../ggsoft_rgs_slot
       dockerfile: Dockerfile
     container_name: rgs-fruit
     env_file:
@@ -176,8 +176,8 @@ services:
     ports:
       - "43317:43317"
     volumes:
-      - ../ggsoft_rgs_3x3/app:/app
-      - ../ggsoft_rgs_3x3/log:/log
+      - ../ggsoft_rgs_slot/app:/app
+      - ../ggsoft_rgs_slot/log:/log
       - type: bind
         source: ./.build
         target: /.build

@@ -42,17 +42,17 @@ cp "$ENVS_DIR/history.env" "$WORKSPACE_DIR/ggsoft_history/.env"
 echo -e "   ${GREEN}✓${NC} Copiado history.env"
 
 # Math
-echo -e "${YELLOW}🔢 Math → ggsoft_math_3x3/${NC}"
-mkdir -p "$WORKSPACE_DIR/ggsoft_math_3x3"
-cat > "$WORKSPACE_DIR/ggsoft_math_3x3/.env" << EOF
+echo -e "${YELLOW}🔢 Math → ggsoft_math-3x3/${NC}"
+mkdir -p "$WORKSPACE_DIR/ggsoft_math-3x3"
+cat > "$WORKSPACE_DIR/ggsoft_math-3x3/.env" << EOF
 SERVER_PORT=49235
 EOF
 echo -e "   ${GREEN}✓${NC} Criado math.env (SERVER_PORT=49235)"
 
 # RGS
-echo -e "${YELLOW}🎮 RGS → ggsoft_rgs_3x3/${NC}"
-mkdir -p "$WORKSPACE_DIR/ggsoft_rgs_3x3"
-cp "$ENVS_DIR/rgs.env" "$WORKSPACE_DIR/ggsoft_rgs_3x3/.env"
+echo -e "${YELLOW}🎮 RGS → ggsoft_rgs_slot/${NC}"
+mkdir -p "$WORKSPACE_DIR/ggsoft_rgs_slot"
+cp "$ENVS_DIR/rgs.env" "$WORKSPACE_DIR/ggsoft_rgs_slot/.env"
 echo -e "   ${GREEN}✓${NC} Copiado rgs.env"
 
 # System-Control
@@ -88,8 +88,8 @@ echo "   • ggsoft_infra_mysql/.env"
 echo "   • ggsoft_infra_redis/.env"
 echo "   • ggsoft_wallet-auth/.env"
 echo "   • ggsoft_history/.env"
-echo "   • ggsoft_math_3x3/.env"
-echo "   • ggsoft_rgs_3x3/.env"
+echo "   • ggsoft_math-3x3/.env"
+echo "   • ggsoft_rgs_slot/.env"
 echo "   • ggsoft_system-control/.env"
 echo ""
 echo -e "${YELLOW}Nota:${NC} Cada projeto agora pode ser rodado individualmente com 'make up'"
