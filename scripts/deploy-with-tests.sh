@@ -119,116 +119,104 @@ for port in 53306 8888 8890 43317 8001 2555; do
 done
 echo -e "   ${GREEN}✓ Portas liberadas${NC}"
 
-if [ "$TEST_FAILED" -eq 0 ]; then
-    # Sobe mysql, redis e wallet-auth (com dependências); aguarda antes de subir o resto
-    echo -e "${YELLOW}Subindo mysql, redis e wallet-auth...${NC}"
-    $DC --profile integration-test up -d wallet-auth 2>&1 | tee -a "$TEST_OUTPUT" || true
+# --- Helpers da fase de integração -------------------------------------------
 
-    # Aguarda banco CS1 existir (init.sql pode ainda estar rodando)
-    MYSQL_ROOT_PASS=$(grep "^MYSQL_ROOT_PASSWORD=" "$ENVS_DIR/mysql.env" 2>/dev/null | cut -d'=' -f2 | head -1)
-    DB_NAME=$(grep "^MYSQL_DATABASE=" "$ENVS_DIR/wallet-auth.env" 2>/dev/null | cut -d'=' -f2 | head -1)
-    DB_NAME="${DB_NAME:-CS1}"
-    echo -e "${YELLOW}Aguardando banco '$DB_NAME' no MySQL (max 60s)...${NC}"
-    DB_READY=0
-    for i in $(seq 1 20); do
-        if docker exec mysql_database mysql -uroot -p"$MYSQL_ROOT_PASS" -e "USE $DB_NAME;" 2>/dev/null; then
-            DB_READY=1
-            echo -e "   ${GREEN}✓ Database $DB_NAME pronto${NC}"
-            break
-        fi
-        echo -e "   aguardando init.sql... [$i/20]"
+# Aguarda o database existir (init.sql pode ainda estar rodando). 0=ok, 1=timeout
+_wait_db() {
+    for _ in $(seq 1 20); do
+        docker exec mysql_database mysql -uroot -p"$MYSQL_ROOT_PASS" \
+            -e "USE \`$DB_NAME\`;" 2>/dev/null && return 0
         sleep 3
     done
-    if [ "$DB_READY" -eq 0 ]; then
-        echo -e "   ${YELLOW}⚠ Database $DB_NAME não confirmado em 60s — continuando mesmo assim${NC}"
-    fi
+    return 1
+}
 
-    # Aguarda wallet-auth ficar healthy (max 150s) e captura logs se falhar
-    echo -e "${YELLOW}Aguardando wallet-auth ficar healthy (max 150s)...${NC}"
-    WALLET_HEALTHY=0
-    for i in $(seq 1 30); do
-        STATUS=$(docker inspect --format='{{.State.Health.Status}}' python-app-wallet-auth 2>/dev/null)
-        if [ "$STATUS" = "healthy" ]; then
-            WALLET_HEALTHY=1
-            echo -e "   ${GREEN}✓ wallet-auth healthy${NC}"
-            break
-        elif [ "$STATUS" = "unhealthy" ]; then
-            echo -e "   ${RED}✗ wallet-auth unhealthy — capturando logs${NC}"
-            printf "\n=== LOGS wallet-auth ===\n" | tee -a "$TEST_OUTPUT"
-            WALLET_LOGS=$(docker logs python-app-wallet-auth 2>&1)
-            echo "$WALLET_LOGS" | tee -a "$TEST_OUTPUT"
+# Testa as credenciais que o wallet-auth realmente usa. 0=ok, 1=falha
+_app_creds_ok() {
+    docker exec mysql_database mysql -u"$APP_USER" -p"$APP_PASS" \
+        -e "USE \`$DB_NAME\`; SELECT 1;" 2>/dev/null
+}
 
-            # Detecta credencial incompatível entre wallet-auth.env e volume MySQL
-            if echo "$WALLET_LOGS" | grep -q "Access denied"; then
-                echo ""
-                echo -e "${RED}╔══════════════════════════════════════════════════════════════════╗${NC}"
-                echo -e "${RED}║  ⚠️  CREDENCIAIS INCOMPATÍVEIS COM O VOLUME MYSQL                ║${NC}"
-                echo -e "${RED}╚══════════════════════════════════════════════════════════════════╝${NC}"
-                echo ""
-                echo -e "${YELLOW}O volume MySQL contém dados de um deploy anterior com senhas${NC}"
-                echo -e "${YELLOW}diferentes das geradas agora. O wallet-auth não consegue autenticar.${NC}"
-                echo ""
-                echo -e "${RED}⚠️  IMPACTO DA CORREÇÃO AUTOMÁTICA:${NC}"
-                echo -e "${RED}  • Volume MySQL será apagado — TODOS OS DADOS DO BANCO SERÃO PERDIDOS${NC}"
-                echo -e "${RED}  • Volume Redis será apagado — sessões ativas encerradas${NC}"
-                echo -e "${RED}  • Banco recriado do zero via init.sql com as senhas atuais${NC}"
-                echo ""
-                echo -e "${YELLOW}Para fazer backup antes de continuar:${NC}"
-                MYSQL_ROOT_PASS_HINT=$(grep "^MYSQL_ROOT_PASSWORD=" "$ENVS_DIR/mysql.env" 2>/dev/null | cut -d'=' -f2 | head -1)
-                echo -e "${YELLOW}  docker exec mysql_database mysqldump -uroot -p'${MYSQL_ROOT_PASS_HINT:-SENHA_ROOT}' --all-databases > backup_\$(date +%Y%m%d).sql${NC}"
-                echo ""
-                printf "\n=== DIAGNÓSTICO: credenciais incompatíveis com volume MySQL ===\n" >> "$TEST_OUTPUT"
-
-                # Countdown — Ctrl+C cancela e o trap limpa tudo
-                echo -e "${CYAN}Corrigindo automaticamente em 15s — Ctrl+C para cancelar${NC}"
-                for _c in $(seq 15 -1 1); do
-                    printf "\r   %ds... " $_c
-                    sleep 1
-                done
-                echo ""
-
-                echo -e "${YELLOW}Limpando volumes e reiniciando...${NC}"
-                $DC down 2>/dev/null || true
-                docker volume rm ggsoft_platform_mysql_data ggsoft_platform_redis_data 2>/dev/null || true
-
-                echo -e "${YELLOW}Subindo mysql, redis e wallet-auth com volumes limpos...${NC}"
-                $DC --profile integration-test up -d wallet-auth 2>&1 | tee -a "$TEST_OUTPUT" || true
-
-                echo -e "${YELLOW}Aguardando banco '$DB_NAME' no MySQL...${NC}"
-                for j in $(seq 1 20); do
-                    if docker exec mysql_database mysql -uroot -p"$MYSQL_ROOT_PASS" -e "USE $DB_NAME;" 2>/dev/null; then
-                        echo -e "   ${GREEN}✓ Database $DB_NAME pronto${NC}"
-                        break
-                    fi
-                    echo -e "   aguardando init.sql... [$j/20]"
-                    sleep 3
-                done
-
-                echo -e "${YELLOW}Aguardando wallet-auth (max 150s)...${NC}"
-                for j in $(seq 1 30); do
-                    STATUS2=$(docker inspect --format='{{.State.Health.Status}}' python-app-wallet-auth 2>/dev/null)
-                    if [ "$STATUS2" = "healthy" ]; then
-                        WALLET_HEALTHY=1
-                        echo -e "   ${GREEN}✓ wallet-auth healthy após correção${NC}"
-                        break
-                    elif [ "$STATUS2" = "unhealthy" ]; then
-                        echo -e "   ${RED}✗ wallet-auth ainda unhealthy após limpeza — verifique os logs acima${NC}"
-                        docker logs python-app-wallet-auth 2>&1 | tail -10 | tee -a "$TEST_OUTPUT"
-                        break
-                    fi
-                    echo -e "   aguardando... [$j/30] ($STATUS2)"
-                    sleep 5
-                done
-            fi
-            break
-        fi
-        echo -e "   aguardando... [$i/30] ($STATUS)"
+# Aguarda wallet-auth ficar healthy. 0=healthy, 1=unhealthy/timeout
+_wait_wallet_healthy() {
+    for _ in $(seq 1 30); do
+        st=$(docker inspect --format='{{.State.Health.Status}}' python-app-wallet-auth 2>/dev/null)
+        [ "$st" = "healthy" ]   && { echo -e "   ${GREEN}✓ wallet-auth healthy${NC}"; return 0; }
+        [ "$st" = "unhealthy" ] && return 1
+        echo -e "   aguardando wallet-auth... ($st)"
         sleep 5
     done
+    return 1
+}
 
-    if [ "$WALLET_HEALTHY" -eq 0 ]; then
-        echo -e "${RED}❌ wallet-auth não ficou healthy${NC}"
-        TEST_FAILED=1
+# Sobe infra (mysql, redis), aguarda DB pronto. 0=ok
+_start_infra_wait_db() {
+    $DC up -d mysql redis 2>&1 | tee -a "$TEST_OUTPUT" || true
+    echo -e "${YELLOW}Aguardando banco '$DB_NAME' (max 60s)...${NC}"
+    if _wait_db; then
+        echo -e "   ${GREEN}✓ Database $DB_NAME pronto${NC}"
+    else
+        echo -e "   ${YELLOW}⚠ Database $DB_NAME não confirmado em 60s — continuando${NC}"
+    fi
+}
+
+if [ "$TEST_FAILED" -eq 0 ]; then
+    MYSQL_ROOT_PASS=$(grep "^MYSQL_ROOT_PASSWORD=" "$ENVS_DIR/mysql.env"       2>/dev/null | cut -d'=' -f2- | head -1)
+    DB_NAME=$(grep      "^MYSQL_DATABASE="      "$ENVS_DIR/wallet-auth.env"   2>/dev/null | cut -d'=' -f2- | head -1)
+    APP_USER=$(grep     "^MYSQL_USER="          "$ENVS_DIR/wallet-auth.env"   2>/dev/null | cut -d'=' -f2- | head -1)
+    APP_PASS=$(grep     "^MYSQL_PASSWORD="      "$ENVS_DIR/wallet-auth.env"   2>/dev/null | cut -d'=' -f2- | head -1)
+    DB_NAME="${DB_NAME:-CS1}"
+    APP_USER="${APP_USER:-ggsoft_user}"
+
+    echo -e "${YELLOW}Subindo mysql + redis...${NC}"
+    _start_infra_wait_db
+
+    # Detecção PROATIVA de volume obsoleto: testa as credenciais do app contra o
+    # MySQL ANTES de subir o wallet-auth — evita esperar ~150s de retentativas.
+    if ! _app_creds_ok; then
+        echo ""
+        echo -e "${RED}╔══════════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${RED}║  ⚠️  VOLUME MYSQL OBSOLETO (senhas não conferem)                 ║${NC}"
+        echo -e "${RED}╚══════════════════════════════════════════════════════════════════╝${NC}"
+        echo -e "${YELLOW}O volume MySQL guarda senhas de um deploy anterior. As credenciais${NC}"
+        echo -e "${YELLOW}atuais ($APP_USER) não autenticam — recriando o banco do zero.${NC}"
+        echo ""
+        echo -e "${RED}⚠️  Os volumes mysql_data e redis_data serão APAGADOS.${NC}"
+        echo -e "${YELLOW}Backup (se necessário, antes de futuros deploys):${NC}"
+        echo -e "${YELLOW}  docker exec mysql_database mysqldump -uroot -p'${MYSQL_ROOT_PASS:-SENHA_ROOT}' --all-databases > backup_\$(date +%Y%m%d).sql${NC}"
+        printf "\n=== DIAGNÓSTICO: volume MySQL obsoleto — recriado automaticamente ===\n" >> "$TEST_OUTPUT"
+
+        $DC down 2>/dev/null || true
+        docker volume rm ggsoft_platform_mysql_data ggsoft_platform_redis_data 2>/dev/null || true
+
+        echo -e "${YELLOW}Recriando infra com volumes limpos...${NC}"
+        _start_infra_wait_db
+
+        if _app_creds_ok; then
+            echo -e "   ${GREEN}✓ Credenciais OK após recriar o volume${NC}"
+        else
+            echo -e "   ${RED}✗ Credenciais ainda falham — verifique se MYSQL_USER/MYSQL_PASSWORD${NC}"
+            echo -e "   ${RED}  conferem entre mysql.env e wallet-auth.env${NC}"
+            TEST_FAILED=1
+        fi
+    else
+        echo -e "   ${GREEN}✓ Credenciais do app conferem com o MySQL${NC}"
+    fi
+
+    # Sobe o wallet-auth somente após garantir que as credenciais batem
+    if [ "$TEST_FAILED" -eq 0 ]; then
+        echo -e "${YELLOW}Subindo wallet-auth...${NC}"
+        $DC --profile integration-test up -d wallet-auth 2>&1 | tee -a "$TEST_OUTPUT" || true
+        echo -e "${YELLOW}Aguardando wallet-auth ficar healthy (max 150s)...${NC}"
+        if _wait_wallet_healthy; then
+            WALLET_HEALTHY=1
+        else
+            WALLET_HEALTHY=0
+            echo -e "${RED}❌ wallet-auth não ficou healthy — logs:${NC}"
+            printf "\n=== LOGS wallet-auth ===\n" >> "$TEST_OUTPUT"
+            docker logs python-app-wallet-auth 2>&1 | tail -30 | tee -a "$TEST_OUTPUT"
+            TEST_FAILED=1
+        fi
     fi
 fi
 
