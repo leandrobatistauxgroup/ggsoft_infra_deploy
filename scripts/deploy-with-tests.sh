@@ -64,7 +64,7 @@ TEST_FAILED=0
 echo -e "${YELLOW}🧪 Testando wallet-auth...${NC}"
 
 # Sobe MySQL de teste
-if ! docker compose up -d mysql-test 2>&1 | tee -a "$TEST_OUTPUT"; then
+if ! docker-compose up -d mysql-test 2>&1 | tee -a "$TEST_OUTPUT"; then
     echo -e "${RED}❌ Falha ao subir MySQL de teste${NC}"
     TEST_FAILED=1
 fi
@@ -72,7 +72,7 @@ fi
 # Aguarda MySQL estar pronto para aceitar conexões
 echo -e "${YELLOW}Aguardando MySQL de teste aceitar conexões...${NC}"
 for i in $(seq 1 20); do
-    if docker compose exec -T mysql-test mysqladmin ping -h localhost -uroot -proot_test --silent 2>/dev/null; then
+    if docker-compose exec -T mysql-test mysqladmin ping -h localhost -uroot -proot_test --silent 2>/dev/null; then
         echo -e "   ${GREEN}✓ MySQL pronto${NC}"
         break
     fi
@@ -80,23 +80,23 @@ for i in $(seq 1 20); do
 done
 
 # Executa testes wallet-auth
-echo -e "${YELLOW}Running: docker compose run --rm wallet-auth-tests${NC}" | tee -a "$TEST_OUTPUT"
-if ! docker compose run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
+echo -e "${YELLOW}Running: docker-compose run --rm wallet-auth-tests${NC}" | tee -a "$TEST_OUTPUT"
+if ! docker-compose run --rm wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
     echo -e "${RED}❌ Testes do wallet-auth falharam${NC}"
     TEST_FAILED=1
 fi
 
 # Verifica containers rodando e derruba automaticamente
-RUNNING=$(docker compose ps --status running --format '{{.Name}} (porta: {{.Ports}})' 2>/dev/null | grep -v '^$' || true)
+RUNNING=$(docker-compose ps --status running --format '{{.Name}} (porta: {{.Ports}})' 2>/dev/null | grep -v '^$' || true)
 if [ -n "$RUNNING" ]; then
     echo ""
     echo -e "${YELLOW}⚠️  Containers em execução detectados:${NC}"
     echo "$RUNNING" | while read -r line; do echo "   • $line"; done
     echo ""
     echo -e "${BLUE}Derrubando containers automaticamente...${NC}"
-    docker compose down 2>/dev/null || true
-    docker compose --profile test down 2>/dev/null || true
-    docker compose --profile integration-test down 2>/dev/null || true
+    docker-compose down 2>/dev/null || true
+    docker-compose --profile test down 2>/dev/null || true
+    docker-compose --profile integration-test down 2>/dev/null || true
 fi
 
 # =============================================================================
@@ -109,8 +109,8 @@ echo ""
 
 # Limpa todos os containers que possam conflitar com as portas antes de subir integração
 echo -e "${YELLOW}Liberando portas para testes de integração...${NC}"
-docker compose down 2>/dev/null || true
-docker compose --profile test down 2>/dev/null || true
+docker-compose down 2>/dev/null || true
+docker-compose --profile test down 2>/dev/null || true
 for port in 53306 8888 8890 43317 8001 2555; do
     cname=$(docker ps --filter "publish=$port" --format '{{.Names}}' 2>/dev/null | head -1)
     if [ -n "$cname" ]; then
@@ -122,13 +122,13 @@ done
 echo -e "   ${GREEN}✓ Portas liberadas${NC}"
 
 echo -e "${YELLOW}🧪 Testando integração de serviços...${NC}"
-echo -e "${YELLOW}Running: docker compose --profile integration-test run --rm integration-tests${NC}" | tee -a "$TEST_OUTPUT"
+echo -e "${YELLOW}Running: docker-compose --profile integration-test run --rm integration-tests${NC}" | tee -a "$TEST_OUTPUT"
 
 # Os serviços são subidos automaticamente pelo depends_on do integration-tests
 sleep 5
 
 # Executa testes de integração
-if ! docker compose --profile integration-test run --rm integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
+if ! docker-compose --profile integration-test run --rm integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
     echo -e "${RED}❌ Testes de integração falharam${NC}"
     TEST_FAILED=1
 else
@@ -136,7 +136,7 @@ else
 fi
 
 # Limpa recursos de teste
-docker compose down 2>/dev/null || true
+docker-compose down 2>/dev/null || true
 
 # =============================================================================
 # FASE 3: ANÁLISE DE RESULTADOS
@@ -178,7 +178,7 @@ Nenhum serviço foi iniciado em produção.
 
 ### Comando Executado
 \`\`\`bash
-docker compose --profile test run --rm wallet-auth-tests
+docker-compose --profile test run --rm wallet-auth-tests
 \`\`\`
 
 ### Saída dos Testes
@@ -361,7 +361,7 @@ if [ "$RGS_GAME_NAME" = "fruits" ]; then
     echo -e "${GREEN}✅ RGS GAME_NAME configurado: $RGS_GAME_NAME${NC}"
 else
     echo -e "${RED}❌ RGS GAME_NAME incorreto ou não definido: '$RGS_GAME_NAME' (esperado: fruits)${NC}"
-    echo -e "${YELLOW}   Verificar docker compose.yml - environment: GAME_NAME${NC}"
+    echo -e "${YELLOW}   Verificar docker-compose.yml - environment: GAME_NAME${NC}"
 fi
 
 # Testa conectividade RGS -> History

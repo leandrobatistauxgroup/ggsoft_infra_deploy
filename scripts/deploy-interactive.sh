@@ -46,7 +46,7 @@ if [ -f "$ENVS_DIR/mysql.env" ]; then
             echo -e "${YELLOW}🗑️  Apagando arquivos .env antigos...${NC}"
             rm -f $ENVS_DIR/*.env
             echo -e "${YELLOW}⚠️  Flag -n: Limpando containers e volumes do GGSoft...${NC}"
-            docker compose down 2>/dev/null || true
+            docker-compose down 2>/dev/null || true
             docker volume rm ggsoft_platform_mysql_data 2>/dev/null || true
             docker volume rm ggsoft_platform_redis_data 2>/dev/null || true
         else
