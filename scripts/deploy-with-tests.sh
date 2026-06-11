@@ -4,8 +4,6 @@
 # Responsabilidade: SOMENTE testar. Não inicia serviços, não configura .env.
 # =============================================================================
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="${WORKSPACE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 ENVS_DIR="${ENVS_DIR:-$SCRIPT_DIR/../envs}"
@@ -121,12 +119,68 @@ for port in 53306 8888 8890 43317 8001 2555; do
 done
 echo -e "   ${GREEN}✓ Portas liberadas${NC}"
 
-echo -e "${YELLOW}🧪 Executando testes de integração...${NC}"
-if ! $DC --profile integration-test run --rm integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
-    echo -e "${RED}❌ Testes de integração falharam${NC}"
-    TEST_FAILED=1
-else
-    echo -e "${GREEN}✅ Testes de integração passaram!${NC}"
+if [ "$TEST_FAILED" -eq 0 ]; then
+    # Sobe mysql, redis e wallet-auth (com dependências); aguarda antes de subir o resto
+    echo -e "${YELLOW}Subindo mysql, redis e wallet-auth...${NC}"
+    $DC --profile integration-test up -d wallet-auth 2>&1 | tee -a "$TEST_OUTPUT" || true
+
+    # Aguarda banco CS1 existir (init.sql pode ainda estar rodando)
+    MYSQL_ROOT_PASS=$(grep "^MYSQL_ROOT_PASSWORD=" "$ENVS_DIR/mysql.env" 2>/dev/null | cut -d'=' -f2 | head -1)
+    DB_NAME=$(grep "^MYSQL_DATABASE=" "$ENVS_DIR/wallet-auth.env" 2>/dev/null | cut -d'=' -f2 | head -1)
+    DB_NAME="${DB_NAME:-CS1}"
+    echo -e "${YELLOW}Aguardando banco '$DB_NAME' no MySQL (max 60s)...${NC}"
+    DB_READY=0
+    for i in $(seq 1 20); do
+        if docker exec mysql_database mysql -uroot -p"$MYSQL_ROOT_PASS" -e "USE $DB_NAME;" 2>/dev/null; then
+            DB_READY=1
+            echo -e "   ${GREEN}✓ Database $DB_NAME pronto${NC}"
+            break
+        fi
+        echo -e "   aguardando init.sql... [$i/20]"
+        sleep 3
+    done
+    if [ "$DB_READY" -eq 0 ]; then
+        echo -e "   ${YELLOW}⚠ Database $DB_NAME não confirmado em 60s — continuando mesmo assim${NC}"
+    fi
+
+    # Aguarda wallet-auth ficar healthy (max 150s) e captura logs se falhar
+    echo -e "${YELLOW}Aguardando wallet-auth ficar healthy (max 150s)...${NC}"
+    WALLET_HEALTHY=0
+    for i in $(seq 1 30); do
+        STATUS=$(docker inspect --format='{{.State.Health.Status}}' python-app-wallet-auth 2>/dev/null)
+        if [ "$STATUS" = "healthy" ]; then
+            WALLET_HEALTHY=1
+            echo -e "   ${GREEN}✓ wallet-auth healthy${NC}"
+            break
+        elif [ "$STATUS" = "unhealthy" ]; then
+            echo -e "   ${RED}✗ wallet-auth unhealthy — capturando logs${NC}"
+            printf "\n=== LOGS wallet-auth ===\n" | tee -a "$TEST_OUTPUT"
+            docker logs python-app-wallet-auth 2>&1 | tee -a "$TEST_OUTPUT"
+            break
+        fi
+        echo -e "   aguardando... [$i/30] ($STATUS)"
+        sleep 5
+    done
+
+    if [ "$WALLET_HEALTHY" -eq 0 ]; then
+        echo -e "${RED}❌ wallet-auth não ficou healthy${NC}"
+        TEST_FAILED=1
+    fi
+fi
+
+if [ "$TEST_FAILED" -eq 0 ]; then
+    # Sobe serviços restantes (rgs-fruit, nginx, history, math)
+    echo -e "${YELLOW}Subindo demais serviços de integração...${NC}"
+    $DC --profile integration-test up -d history math rgs-fruit nginx 2>&1 | tee -a "$TEST_OUTPUT" || true
+    sleep 10
+
+    echo -e "${YELLOW}🧪 Executando testes de integração...${NC}"
+    if ! $DC --profile integration-test run --rm integration-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
+        echo -e "${RED}❌ Testes de integração falharam${NC}"
+        TEST_FAILED=1
+    else
+        echo -e "${GREEN}✅ Testes de integração passaram!${NC}"
+    fi
 fi
 
 # Limpa containers de integração
