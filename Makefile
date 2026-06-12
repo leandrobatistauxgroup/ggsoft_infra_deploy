@@ -10,7 +10,7 @@
 #   4. Frontend: nginx, system-control
 # =============================================================================
 
-.PHONY: help setup init-build start start-infra start-apps start-rgs stop restart logs status wait-health test clean verify envs set-server-ip set-server-ip-manual deploy-https deploy-edge reload-nginx
+.PHONY: help setup init-build start start-infra start-apps start-rgs stop restart logs status wait-health test clean verify envs set-server-ip set-server-ip-manual deploy-https deploy-edge reload-nginx update-db-urls
 
 # Detecta docker compose V2 (plugin) ou docker-compose V1 (binário legado)
 DOCKER_COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
@@ -381,3 +381,11 @@ update-envs: ## Sincroniza senhas entre arquivos .env (após edição manual)
 	@echo ""
 	@echo "  - history.env: API_SECRET_KEY"
 	@echo "  - rgs.env: HISTORY_SECRET_KEY"
+
+update-db-urls: ## Atualiza URLs no banco MySQL (lê do .env do system-control)
+	@echo "$(BLUE)=== Atualizando URLs no banco MySQL ===$(NC)"
+	@chmod +x scripts/update-db-urls.sh
+	@./scripts/update-db-urls.sh
+	@echo ""
+	@echo "$(YELLOW)🔄 Reinicie o system-control para aplicar:$(NC)"
+	@echo "   docker restart ggsoft_system-control"
