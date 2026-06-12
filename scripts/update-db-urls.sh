@@ -37,7 +37,7 @@ fi
 SERVER_IP="${SERVER_IP:-10.10.42.144}"
 NGINX_PUBLIC_URL="${NGINX_PUBLIC_URL:-http://${SERVER_IP}:8001}"
 RGS_PUBLIC_URL="${RGS_PUBLIC_URL:-http://${SERVER_IP}:43317/}"
-PAGE_URL="${PAGE_URL:-http://${SERVER_IP}:2555/choice}"
+PAGE_URL="${PAGE_URL:-http://${SERVER_IP}:2555/}"
 
 echo ""
 echo "📋 Configuração detectada:"
@@ -47,7 +47,7 @@ echo "   RGS_PUBLIC_URL: $RGS_PUBLIC_URL"
 echo "   PAGE_URL: $PAGE_URL"
 echo ""
 
-# Extrair URLs para o banco (remover protocolo se necessário)
+# Usar URLs direto do .env (sem modificar)
 GAME_URL="${NGINX_PUBLIC_URL}/games"
 PAGE_URL_FINAL="${PAGE_URL}"
 RGS_URL_FINAL="${RGS_PUBLIC_URL}"
