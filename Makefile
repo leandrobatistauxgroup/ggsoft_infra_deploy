@@ -10,7 +10,7 @@
 #   4. Frontend: nginx, system-control
 # =============================================================================
 
-.PHONY: help setup init-build start start-infra start-apps start-rgs stop restart logs status wait-health test clean verify envs set-server-ip set-server-ip-manual deploy-https deploy-edge
+.PHONY: help setup init-build start start-infra start-apps start-rgs stop restart logs status wait-health test clean verify envs set-server-ip set-server-ip-manual deploy-https deploy-edge reload-nginx
 
 # Detecta docker compose V2 (plugin) ou docker-compose V1 (binário legado)
 DOCKER_COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
@@ -32,6 +32,9 @@ export WORKSPACE_DIR
 # Edge HTTPS (camada opcional por cima do HTTP) — repo irmão, clonado pelo
 # setup-repos.sh junto com os demais (make clone).
 EDGE_DIR ?= $(WORKSPACE_DIR)/ggsoft_infra_nginx-proxy-https
+
+# Nginx de assets (HTTP) — repo irmão
+ASSETS_DIR ?= $(WORKSPACE_DIR)/ggsoft_infra_nginx
 
 # Cores para output
 GREEN := '\033[0;32m'
@@ -148,6 +151,22 @@ deploy-edge: ## Insere só a camada HTTPS (edge) sobre o HTTP que já está roda
 	@$(MAKE) -C "$(EDGE_DIR)" crm system-control game
 	@echo "$(GREEN)✓ HTTPS inserido — HTTP segue intacto.$(NC)"
 	@echo "$(YELLOW)   Cert real (precisa DNS apontando): make -C $(EDGE_DIR) cert$(NC)"
+
+reload-nginx: ## Aplica o config do assets (default.conf/nginx.conf) no ggsoft_nginx — ZERO downtime
+	@echo "$(BLUE)=== Recarregando ggsoft_nginx (assets) ===$(NC)"
+	@git -C "$(ASSETS_DIR)" pull --ff-only 2>/dev/null || echo "$(YELLOW)⚠ git pull do assets ignorado$(NC)"
+	@if docker ps --format '{{.Names}}' | grep -q '^ggsoft_nginx$$'; then \
+		docker exec -i ggsoft_nginx sh -c 'cat > /etc/nginx/conf.d/default.conf' < "$(ASSETS_DIR)/default.conf"; \
+		docker exec -i ggsoft_nginx sh -c 'cat > /etc/nginx/nginx.conf'            < "$(ASSETS_DIR)/nginx.conf"; \
+		if docker exec ggsoft_nginx nginx -t; then \
+			docker exec ggsoft_nginx nginx -s reload; \
+			echo "$(GREEN)✓ ggsoft_nginx recarregado (zero downtime)$(NC)"; \
+		else \
+			echo "$(RED)❌ nginx -t falhou — reload abortado, produção intacta$(NC)"; exit 1; \
+		fi; \
+	else \
+		echo "$(YELLOW)⚠ ggsoft_nginx não está rodando — use 'make start' ou 'make deploy'$(NC)"; \
+	fi
 
 sync: ## Sincroniza .env do deploy para todos os projetos
 	@echo "$(BLUE)=== Sincronizando .env para todos os projetos ===${NC}"
