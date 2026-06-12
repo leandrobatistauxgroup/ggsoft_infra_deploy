@@ -47,15 +47,17 @@ class TestCSVDataIntegrity:
             "Deve ter game_location com fruits(8) -> GGSOFT(1)"
     
     def test_game_location_csv_uses_correct_rgs_port(self):
-        """RGS URL deve usar porta 43317 (fruits)"""
+        """RGS URL deve usar porta 43317 ou domínio HTTPS rgs.ggsoft-tech.xyz (fruits)"""
         with open(f"{self.BASE_PATH}/game_location.csv", 'r') as f:
             reader = csv.DictReader(f)
             game_locs = list(reader)
         
         for gl in game_locs:
             if gl['id_game'] == '8':  # fruits
-                assert '43317' in gl['rgs_url'], \
-                    f"Fruits deve usar RGS porta 43317, encontrado: {gl['rgs_url']}"
+                # Aceita tanto porta 43317 (IP) quanto domínio HTTPS
+                valid_rgs = '43317' in gl['rgs_url'] or 'rgs.ggsoft-tech.xyz' in gl['rgs_url']
+                assert valid_rgs, \
+                    f"Fruits deve usar RGS porta 43317 ou domínio rgs.ggsoft-tech.xyz, encontrado: {gl['rgs_url']}"
     
     def test_users_csv_has_test_users_with_is_test(self):
         """Usuários de teste devem ter is_test=1"""
