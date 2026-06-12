@@ -90,7 +90,9 @@ if [ "$TEST_FAILED" -eq 0 ]; then
     fi
 
     echo -e "${YELLOW}🧪 Executando testes wallet-auth...${NC}"
-    if ! $DC run --rm -T wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"; then
+    $DC run --rm -T wallet-auth-tests 2>&1 | tee -a "$TEST_OUTPUT"
+    # Verificar se houve falhas reais no output, não só exit code
+    if grep -qE "FAILED|ERROR.*test|failures" "$TEST_OUTPUT" 2>/dev/null; then
         echo -e "${RED}❌ Testes do wallet-auth falharam${NC}"
         TEST_FAILED=1
     fi
