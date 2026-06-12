@@ -27,6 +27,7 @@ ggsoft_system-control|git@github.com:GGSoftBR/ggsoft_system-control.git
 ggsoft_infra_mysql|git@github-ggsoft:GGSoftBR/ggsoft_infra_mysql.git
 ggsoft_infra_redis|git@github-ggsoft:GGSoftBR/ggsoft_infra_redis.git
 ggsoft_infra_nginx|git@github-ggsoft:GGSoftBR/ggsoft_infra_nginx.git
+ggsoft_infra_nginx-proxy-https|git@github.com:GGSoftBR/ggsoft_infra_nginx-proxy-https.git
 ggsoft_game_slot3x3|git@github-ggsoft:GGSoftBR/ggsoft_game_slot3x3.git
 landf_haxe_libs|git@github-ggsoft:GGSoftBR/landf_haxe_libs.git
 "

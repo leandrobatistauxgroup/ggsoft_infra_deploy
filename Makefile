@@ -29,9 +29,9 @@ ENVS_DIR := ./envs
 WORKSPACE_DIR ?= $(shell cd .. && pwd)
 export WORKSPACE_DIR
 
-# Edge HTTPS (camada opcional por cima do HTTP) — repo irmão
-EDGE_DIR  ?= $(WORKSPACE_DIR)/ggsoft_infra_nginx-proxy-https
-EDGE_REPO := git@github.com:GGSoftBR/ggsoft_infra_nginx-proxy-https.git
+# Edge HTTPS (camada opcional por cima do HTTP) — repo irmão, clonado pelo
+# setup-repos.sh junto com os demais (make clone).
+EDGE_DIR ?= $(WORKSPACE_DIR)/ggsoft_infra_nginx-proxy-https
 
 # Cores para output
 GREEN := '\033[0;32m'
@@ -144,11 +144,6 @@ deploy-https: ## Deploy completo (HTTP) + camada HTTPS (edge nginx-proxy)
 
 deploy-edge: ## Insere só a camada HTTPS (edge) sobre o HTTP que já está rodando
 	@echo "$(BLUE)=== Camada HTTPS (edge nginx-proxy) ===$(NC)"
-	@if [ ! -d "$(EDGE_DIR)/.git" ]; then \
-		echo "$(YELLOW)Edge não encontrado — clonando em $(EDGE_DIR)...$(NC)"; \
-		git clone $(EDGE_REPO) "$(EDGE_DIR)" || { \
-			echo "$(RED)❌ Não consegui clonar o edge. Clone manualmente em $(EDGE_DIR)$(NC)"; exit 1; }; \
-	fi
 	@$(MAKE) -C "$(EDGE_DIR)" up
 	@$(MAKE) -C "$(EDGE_DIR)" crm system-control game
 	@echo "$(GREEN)✓ HTTPS inserido — HTTP segue intacto.$(NC)"
