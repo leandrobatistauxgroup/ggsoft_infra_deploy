@@ -381,6 +381,20 @@ SERVER_JPS_PORT=44888
 EOF
 
 # System-Control
+# URLs publicas (dominio HTTPS via edge nginx), INDEPENDENTES do SERVER_IP.
+# - Em deploy real (SERVER_IP != localhost): usa os dominios games./rgs./sc.
+# - Em local (SERVER_IP = localhost): deixa vazias => fallback IP:porta no config.go.
+# - Override manual: exporte NGINX_PUBLIC_URL/RGS_PUBLIC_URL/PAGE_URL antes do deploy.
+if [ "$SERVER_IP" = "localhost" ] || [ -z "$SERVER_IP" ]; then
+    SC_NGINX_URL="${NGINX_PUBLIC_URL:-}"
+    SC_RGS_URL="${RGS_PUBLIC_URL:-}"
+    SC_PAGE_URL="${PAGE_URL:-}"
+else
+    SC_NGINX_URL="${NGINX_PUBLIC_URL:-https://games.ggsoft-tech.xyz}"
+    SC_RGS_URL="${RGS_PUBLIC_URL:-https://rgs.ggsoft-tech.xyz/}"
+    SC_PAGE_URL="${PAGE_URL:-https://sc.ggsoft-tech.xyz/}"
+fi
+
 cat > "$ENVS_DIR/system-control.env" << EOF
 # =============================================================================
 # System Control - Painel de controle
@@ -389,9 +403,14 @@ cat > "$ENVS_DIR/system-control.env" << EOF
 # Path ABSOLUTO do workspace no host
 WORKSPACE_DIR=$(cd "$(dirname "$0")/../.." && pwd)
 
-# IP do servidor para URLs externas (detectado automaticamente ou configurado)
+# IP do servidor (fallback IP:porta quando as *_URL abaixo estao vazias)
 # Pode vir da variavel de ambiente SERVER_IP (passada pelo Makefile)
 SERVER_IP=${SERVER_IP:-${SERVER_IP:-localhost}}
+
+# URLs publicas HTTPS (cada uma independente; vazias => fallback http://\${SERVER_IP}:porta)
+NGINX_PUBLIC_URL=${SC_NGINX_URL}
+RGS_PUBLIC_URL=${SC_RGS_URL}
+PAGE_URL=${SC_PAGE_URL}
 
 # Porta do painel (host bind em 127.0.0.1)
 PANEL_PORT=${PANEL_PORT}

@@ -389,3 +389,11 @@ update-db-urls: ## Atualiza URLs no banco MySQL (lê do .env do system-control)
 	@echo ""
 	@echo "$(YELLOW)🔄 Reinicie o system-control para aplicar:$(NC)"
 	@echo "   docker restart ggsoft_system-control"
+
+setup-system-control-env: ## Gera .env do system-control a partir de SERVER_IP (detecta domínio/IP)
+	@echo "$(BLUE)=== Configurando .env do system-control ===$(NC)"
+	@chmod +x scripts/auto-gen-system-control-env.sh
+	@./scripts/auto-gen-system-control-env.sh $(SERVER_IP) $(WORKSPACE_DIR)/ggsoft_system-control
+	@echo ""
+	@echo "$(YELLOW)🔄 Faça rebuild do system-control:$(NC)"
+	@echo "   cd $(WORKSPACE_DIR)/ggsoft_system-control && docker compose build --no-cache system-control"
